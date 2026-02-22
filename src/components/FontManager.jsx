@@ -1,9 +1,31 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useAppState, useAppDispatch } from '../store/AppContext'
+import { saveFont, getAllFonts, deleteFont } from '../utils/indexedDB'
 
 export default function FontManager() {
   const { customFonts } = useAppState()
   const dispatch = useAppDispatch()
+
+  // Load fonts from IndexedDB on mount
+  useEffect(() => {
+    getAllFonts().then(async (fonts) => {
+      if (!fonts || fonts.length === 0) return
+      const loaded = []
+      for (const font of fonts) {
+        try {
+          const fontFace = new FontFace(font.name, font.data)
+          await fontFace.load()
+          document.fonts.add(fontFace)
+          loaded.push({ name: font.name })
+        } catch (err) {
+          console.error(`Failed to load font "${font.name}" from IndexedDB:`, err)
+        }
+      }
+      if (loaded.length > 0) {
+        dispatch({ type: 'SET_CUSTOM_FONTS', payload: loaded })
+      }
+    }).catch(() => {})
+  }, [dispatch])
 
   const handleUpload = useCallback((e) => {
     const file = e.target.files?.[0]
@@ -16,7 +38,9 @@ export default function FontManager() {
         const fontFace = new FontFace(name, reader.result)
         await fontFace.load()
         document.fonts.add(fontFace)
-        dispatch({ type: 'ADD_CUSTOM_FONT', payload: { name, src: reader.result } })
+        dispatch({ type: 'ADD_CUSTOM_FONT', payload: { name } })
+        // Store in IndexedDB (ArrayBuffer)
+        await saveFont({ name, data: reader.result }).catch(() => {})
         dispatch({ type: 'ADD_TOAST', payload: { message: `Font "${name}" loaded`, variant: 'success' } })
       } catch (err) {
         console.error('Font load failed:', err)
@@ -26,6 +50,11 @@ export default function FontManager() {
     reader.readAsArrayBuffer(file)
     e.target.value = ''
   }, [dispatch])
+
+  const handleRemove = async (fontName) => {
+    dispatch({ type: 'REMOVE_CUSTOM_FONT', payload: fontName })
+    await deleteFont(fontName).catch(() => {})
+  }
 
   return (
     <div className="space-y-2">
@@ -56,7 +85,7 @@ export default function FontManager() {
                 {font.name}
               </span>
               <button
-                onClick={() => dispatch({ type: 'REMOVE_CUSTOM_FONT', payload: font.name })}
+                onClick={() => handleRemove(font.name)}
                 className="text-[9px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0 shrink-0"
                 aria-label={`Remove font ${font.name}`}
               >

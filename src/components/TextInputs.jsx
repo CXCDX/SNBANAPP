@@ -50,7 +50,26 @@ function ColorPicker({ field, value, autoColor }) {
   )
 }
 
-function CharInput({ label, field, value, onChange, maxLength, placeholder, font, color, autoColor }) {
+function SizeSlider({ field, value }) {
+  const dispatch = useAppDispatch()
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="range"
+        min="12"
+        max="96"
+        value={value}
+        onChange={(e) => dispatch({ type: 'SET_FIELD_SIZE', payload: { field, size: Number(e.target.value) } })}
+        className="flex-1 h-0.5 appearance-none bg-border cursor-pointer"
+        style={{ accentColor: '#0A0A0A' }}
+        aria-label={`Size for ${field}`}
+      />
+      <span className="text-[8px] font-mono text-secondary w-6 text-right">{value}</span>
+    </div>
+  )
+}
+
+function CharInput({ label, field, value, onChange, maxLength, placeholder, font, color, autoColor, size }) {
   const atLimit = maxLength && value.length >= maxLength
   const counterColor = atLimit ? 'text-danger' : 'text-secondary'
 
@@ -82,6 +101,9 @@ function CharInput({ label, field, value, onChange, maxLength, placeholder, font
         </div>
         <ColorPicker field={field} value={color} autoColor={autoColor} />
       </div>
+      {size !== undefined && (
+        <SizeSlider field={field} value={size} />
+      )}
     </div>
   )
 }
@@ -104,6 +126,7 @@ export default function TextInputs() {
         placeholder="Main headline text"
         font={state.headlineFont}
         color={state.headlineColor}
+        size={state.headlineSize}
       />
       <CharInput
         label="Tagline"
@@ -113,6 +136,7 @@ export default function TextInputs() {
         placeholder="3 Makine Bir Arada"
         font={state.taglineFont}
         color={state.taglineColor}
+        size={state.taglineSize}
       />
       <CharInput
         label="Subtext"
@@ -123,6 +147,7 @@ export default function TextInputs() {
         placeholder="Supporting description"
         font={state.subtextFont}
         color={state.subtextColor}
+        size={state.subtextSize}
       />
       <CharInput
         label="CTA Button"
@@ -132,6 +157,7 @@ export default function TextInputs() {
         placeholder="Shop Now"
         font={state.ctaFont}
         color={state.ctaColor}
+        size={state.ctaSize}
       />
       <CharInput
         label="Badge"

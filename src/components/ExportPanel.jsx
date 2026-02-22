@@ -1,16 +1,24 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { useAppState, useAppDispatch } from '../store/AppContext'
 import { AD_FORMATS, getPlatformFolder } from '../utils/formats'
 import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
+import { runDesignChecks } from '../utils/designPolice'
 import FormatChecklist from './FormatChecklist'
+
+const QUALITY_OPTIONS = [
+  { value: 0.6, label: '60%' },
+  { value: 0.8, label: '80%' },
+  { value: 1.0, label: '100%' },
+]
 
 export default function ExportPanel() {
   const state = useAppState()
   const dispatch = useAppDispatch()
   const [enabledFormats, setEnabledFormats] = useState(AD_FORMATS.map(f => f.id))
+  const exportFnRef = useRef(null)
 
   const toggleFormat = (id) => {
     setEnabledFormats(prev =>
@@ -21,7 +29,7 @@ export default function ExportPanel() {
   const selectAll = () => setEnabledFormats(AD_FORMATS.map(f => f.id))
   const selectNone = () => setEnabledFormats([])
 
-  const handleExport = useCallback(async () => {
+  const doExport = useCallback(async () => {
     if (enabledFormats.length === 0) {
       dispatch({ type: 'ADD_TOAST', payload: { message: 'Select at least one format', variant: 'error' } })
       return
@@ -31,7 +39,6 @@ export default function ExportPanel() {
     dispatch({ type: 'ADD_TOAST', payload: { message: 'Generating...', variant: 'info' } })
 
     try {
-      const zip = new JSZip()
       const formats = AD_FORMATS.filter(f => enabledFormats.includes(f.id))
 
       let bgImg = null
@@ -51,116 +58,41 @@ export default function ExportPanel() {
       const sFont = fontStr(state.subtextFont)
       const cFont = fontStr(state.ctaFont)
 
-      for (const format of formats) {
-        const canvas = document.createElement('canvas')
-        canvas.width = format.width
-        canvas.height = format.height
-        const ctx = canvas.getContext('2d')
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      const mimeType = state.exportQuality < 1 ? 'image/jpeg' : 'image/png'
+      const ext = state.exportQuality < 1 ? 'jpg' : 'png'
 
-        ctx.fillStyle = '#1E1E1E'
-        ctx.fillRect(0, 0, format.width, format.height)
-
-        if (bgImg) {
-          const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height, state.focusPoint)
-          ctx.drawImage(bgImg, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, format.width, format.height)
-
-          const gradient = ctx.createLinearGradient(0, format.height * 0.3, 0, format.height)
-          gradient.addColorStop(0, overlayGradient.to)
-          gradient.addColorStop(1, overlayGradient.from)
-          ctx.fillStyle = gradient
-          ctx.fillRect(0, format.height * 0.3, format.width, format.height * 0.7)
+      // Single format → direct download
+      if (formats.length === 1) {
+        const format = formats[0]
+        const canvas = renderCanvas({
+          format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+        })
+        const blob = await new Promise(resolve =>
+          canvas.toBlob(resolve, mimeType, state.exportQuality)
+        )
+        const fileName = `SharkNinja_${format.name.replace(/[/\s]+/g, '_')}_${dateStr}.${ext}`
+        saveAs(blob, fileName)
+        dispatch({ type: 'ADD_TOAST', payload: { message: `${format.name} exported`, variant: 'success' } })
+      } else {
+        // Multiple → ZIP
+        const zip = new JSZip()
+        for (const format of formats) {
+          const canvas = renderCanvas({
+            format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+          })
+          const blob = await new Promise(resolve =>
+            canvas.toBlob(resolve, mimeType, state.exportQuality)
+          )
+          const folder = getPlatformFolder(format.platform)
+          const fileName = `SharkNinja_${format.name.replace(/[/\s]+/g, '_')}_v1_${dateStr}.${ext}`
+          zip.file(`${folder}/${fileName}`, blob)
         }
 
-        const sc = Math.min(format.width, format.height) / 1080
-        const padding = Math.round(40 * sc)
-        const headlineSize = Math.round(48 * sc)
-        const taglineSize = Math.round(28 * sc)
-        const subtextSize = Math.round(20 * sc)
-        const ctaFontSize = Math.round(18 * sc)
-        const badgeFontSize = Math.round(14 * sc)
-        const logoHeight = Math.round(40 * sc)
-        const badgeImgSize = Math.round(60 * sc)
-        const textAreaY = format.height * 0.50
-
-        if (logoImg) {
-          const lw = logoHeight * (logoImg.width / logoImg.height)
-          ctx.drawImage(logoImg, padding, padding, lw, logoHeight)
-        }
-
-        // Badge image or text
-        if (badgeImg) {
-          const bh = badgeImgSize * (badgeImg.height / badgeImg.width)
-          ctx.drawImage(badgeImg, format.width - padding - badgeImgSize, padding, badgeImgSize, bh)
-        } else if (state.badge) {
-          const bw = Math.max(state.badge.length * badgeFontSize * 0.65, 60)
-          const bh = badgeFontSize * 2.2
-          const bx = format.width - padding - bw
-          ctx.fillStyle = state.brandColor
-          ctx.fillRect(bx, padding, bw, bh)
-          ctx.fillStyle = '#FFFFFF'
-          ctx.font = `bold ${badgeFontSize}px ${hFont}`
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(state.badge, bx + bw / 2, padding + bh / 2)
-        }
-
-        let yOff = textAreaY
-
-        if (state.headline) {
-          ctx.fillStyle = state.headlineColor || autoColor
-          ctx.font = `bold ${headlineSize}px ${hFont}`
-          ctx.textAlign = 'left'
-          ctx.textBaseline = 'top'
-          ctx.globalAlpha = 1
-          yOff = wrapText(ctx, state.headline.toUpperCase(), padding, yOff, format.width - padding * 2, headlineSize * 1.1)
-          yOff += 6
-        }
-
-        if (state.tagline) {
-          ctx.fillStyle = state.taglineColor || autoColor
-          ctx.globalAlpha = state.taglineColor ? 1 : 0.9
-          ctx.font = `italic ${taglineSize}px ${tFont}`
-          ctx.textAlign = 'left'
-          ctx.textBaseline = 'top'
-          yOff = wrapText(ctx, state.tagline, padding, yOff, format.width - padding * 2, taglineSize * 1.3)
-          yOff += 4
-          ctx.globalAlpha = 1
-        }
-
-        if (state.subtext) {
-          ctx.fillStyle = state.subtextColor || autoColor
-          ctx.globalAlpha = state.subtextColor ? 1 : 0.8
-          ctx.font = `${subtextSize}px ${sFont}`
-          ctx.textAlign = 'left'
-          ctx.textBaseline = 'top'
-          wrapText(ctx, state.subtext, padding, yOff, format.width - padding * 2, subtextSize * 1.6)
-          ctx.globalAlpha = 1
-        }
-
-        if (state.ctaText) {
-          const ctaW = Math.max(state.ctaText.length * ctaFontSize * 0.65, 100)
-          const ctaH = ctaFontSize * 2.5
-          const ctaY = format.height - padding - ctaH
-          ctx.fillStyle = state.ctaColor || '#0A0A0A'
-          ctx.fillRect(padding, ctaY, ctaW, ctaH)
-          ctx.fillStyle = '#FFFFFF'
-          ctx.font = `500 ${ctaFontSize}px ${cFont}`
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(state.ctaText.toUpperCase(), padding + ctaW / 2, ctaY + ctaH / 2)
-        }
-
-        ctx.fillStyle = state.brandColor
-        ctx.fillRect(0, format.height - 3, format.width, 3)
-
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
-        const folder = getPlatformFolder(format.platform)
-        zip.file(`${folder}/${format.name.replace(/[/\s]+/g, '_')}_${format.width}x${format.height}.png`, blob)
+        const content = await zip.generateAsync({ type: 'blob' })
+        saveAs(content, `banners_${dateStr}.zip`)
+        dispatch({ type: 'ADD_TOAST', payload: { message: `${formats.length} banners exported`, variant: 'success' } })
       }
-
-      const content = await zip.generateAsync({ type: 'blob' })
-      saveAs(content, `banners_${Date.now()}.zip`)
-      dispatch({ type: 'ADD_TOAST', payload: { message: `${formats.length} banners exported`, variant: 'success' } })
     } catch (err) {
       console.error('Export failed:', err)
       dispatch({ type: 'ADD_TOAST', payload: { message: 'Export failed', variant: 'error' } })
@@ -168,6 +100,56 @@ export default function ExportPanel() {
       dispatch({ type: 'SET_EXPORTING', payload: false })
     }
   }, [enabledFormats, state, dispatch])
+
+  // Store export fn for design police "Export Anyway"
+  exportFnRef.current = doExport
+
+  // Listen for "export anyway" event from DesignPoliceModal
+  useEffect(() => {
+    const handler = () => exportFnRef.current?.()
+    window.addEventListener('banner-export-anyway', handler)
+    return () => window.removeEventListener('banner-export-anyway', handler)
+  }, [])
+
+  const handleExport = useCallback(() => {
+    // Run design police checks first
+    const formats = AD_FORMATS.filter(f => enabledFormats.includes(f.id))
+    if (formats.length === 0) {
+      dispatch({ type: 'ADD_TOAST', payload: { message: 'Select at least one format', variant: 'error' } })
+      return
+    }
+
+    // Run checks using first selected format
+    const format = formats[0]
+    let canvas = null
+    try {
+      // Quick render for checks
+      const bgImg = null // Skip image loading for quick check
+      canvas = renderCanvas({
+        format, state,
+        bgImg: null, logoImg: null, badgeImg: null,
+        autoColor: '#F5F5F5',
+        overlayGradient: getOverlayGradient('light'),
+        hFont: fontStr(state.headlineFont),
+        tFont: fontStr(state.taglineFont),
+        sFont: fontStr(state.subtextFont),
+        cFont: fontStr(state.ctaFont),
+      })
+    } catch {}
+
+    const issues = runDesignChecks(state, canvas, format)
+    const hasErrors = issues.some(i => i.level === 'error')
+    const hasWarnings = issues.some(i => i.level === 'warning')
+
+    if (!hasErrors && !hasWarnings) {
+      // All green → export directly
+      doExport()
+    } else {
+      // Show design police modal
+      dispatch({ type: 'SET_DESIGN_ISSUES', payload: issues })
+      dispatch({ type: 'SET_SHOW_DESIGN_POLICE', payload: true })
+    }
+  }, [enabledFormats, state, dispatch, doExport])
 
   return (
     <div className="space-y-5">
@@ -196,6 +178,27 @@ export default function ExportPanel() {
         </button>
       </div>
 
+      {/* Quality selector */}
+      <div className="space-y-1">
+        <p className="text-[9px] font-mono text-secondary">Quality</p>
+        <div className="flex gap-1">
+          {QUALITY_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => dispatch({ type: 'SET_EXPORT_QUALITY', payload: opt.value })}
+              className="text-[8px] font-mono px-2 py-1 cursor-pointer transition-all"
+              style={{
+                background: state.exportQuality === opt.value ? '#0A0A0A' : 'transparent',
+                color: state.exportQuality === opt.value ? '#FAFAF8' : '#999994',
+                border: '1px solid ' + (state.exportQuality === opt.value ? '#0A0A0A' : '#E0E0DC'),
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <button
         onClick={handleExport}
         disabled={state.isExporting || enabledFormats.length === 0}
@@ -205,12 +208,21 @@ export default function ExportPanel() {
           disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-ink disabled:hover:text-bg
           transition-all duration-200 cursor-pointer"
         style={{ border: '1px solid #0A0A0A' }}
-        aria-label={state.isExporting ? 'Exporting...' : `Export ${enabledFormats.length} formats as ZIP`}
+        aria-label={state.isExporting ? 'Exporting...' : `Export ${enabledFormats.length} formats`}
       >
-        {state.isExporting ? 'Exporting...' : `Generate ${enabledFormats.length} Formats`}
+        {state.isExporting
+          ? 'Exporting...'
+          : enabledFormats.length === 1
+            ? 'Download PNG'
+            : `Generate ${enabledFormats.length} Formats`}
       </button>
     </div>
   )
+}
+
+// Shared export function reference for design police
+export function getExportFn() {
+  return null
 }
 
 function loadImage(src) {
@@ -225,6 +237,124 @@ function loadImage(src) {
 
 function fontStr(name) {
   return `"${name}", sans-serif`
+}
+
+function getCornerPos(position, canvasW, canvasH, elemW, elemH, padding) {
+  switch (position) {
+    case 'top-left':     return { x: padding, y: padding }
+    case 'top-right':    return { x: canvasW - padding - elemW, y: padding }
+    case 'bottom-left':  return { x: padding, y: canvasH - padding - elemH }
+    case 'bottom-right': return { x: canvasW - padding - elemW, y: canvasH - padding - elemH }
+    default:             return { x: padding, y: padding }
+  }
+}
+
+function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont }) {
+  const canvas = document.createElement('canvas')
+  canvas.width = format.width
+  canvas.height = format.height
+  const ctx = canvas.getContext('2d')
+
+  ctx.fillStyle = '#1E1E1E'
+  ctx.fillRect(0, 0, format.width, format.height)
+
+  if (bgImg) {
+    const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height, state.focusPoint)
+    ctx.drawImage(bgImg, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, format.width, format.height)
+    const gradient = ctx.createLinearGradient(0, format.height * 0.3, 0, format.height)
+    gradient.addColorStop(0, overlayGradient.to)
+    gradient.addColorStop(1, overlayGradient.from)
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, format.height * 0.3, format.width, format.height * 0.7)
+  }
+
+  const sc = Math.min(format.width, format.height) / 1080
+  const padding = Math.round(40 * sc)
+  const headlineSize = Math.round((state.headlineSize || 48) * sc)
+  const taglineSize = Math.round((state.taglineSize || 28) * sc)
+  const subtextSize = Math.round((state.subtextSize || 20) * sc)
+  const ctaFontSize = Math.round((state.ctaSize || 18) * sc)
+  const badgeFontSize = Math.round(14 * sc)
+  const logoHeight = Math.round((state.logoSize || 40) * sc)
+  const badgeImgSize = Math.round(60 * sc)
+  const textAreaY = format.height * 0.50
+
+  // Logo — positioned
+  if (logoImg) {
+    const lw = logoHeight * (logoImg.width / logoImg.height)
+    const lp = getCornerPos(state.logoPosition, format.width, format.height, lw, logoHeight, padding)
+    ctx.drawImage(logoImg, lp.x, lp.y, lw, logoHeight)
+  }
+
+  // Badge — positioned
+  const bpos = state.badgePosition || 'top-right'
+  if (badgeImg) {
+    const bh = badgeImgSize * (badgeImg.height / badgeImg.width)
+    const bp = getCornerPos(bpos, format.width, format.height, badgeImgSize, bh, padding)
+    ctx.drawImage(badgeImg, bp.x, bp.y, badgeImgSize, bh)
+  } else if (state.badge) {
+    const bw = Math.max(state.badge.length * badgeFontSize * 0.65, 60)
+    const bh = badgeFontSize * 2.2
+    const bp = getCornerPos(bpos, format.width, format.height, bw, bh, padding)
+    ctx.fillStyle = state.brandColor
+    ctx.fillRect(bp.x, bp.y, bw, bh)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = `bold ${badgeFontSize}px ${hFont}`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(state.badge, bp.x + bw / 2, bp.y + bh / 2)
+  }
+
+  let yOff = textAreaY
+
+  if (state.headline) {
+    ctx.fillStyle = state.headlineColor || autoColor
+    ctx.font = `bold ${headlineSize}px ${hFont}`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    ctx.globalAlpha = 1
+    yOff = wrapText(ctx, state.headline.toUpperCase(), padding, yOff, format.width - padding * 2, headlineSize * 1.1)
+    yOff += 6
+  }
+
+  if (state.tagline) {
+    ctx.fillStyle = state.taglineColor || autoColor
+    ctx.globalAlpha = state.taglineColor ? 1 : 0.9
+    ctx.font = `italic ${taglineSize}px ${tFont}`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    yOff = wrapText(ctx, state.tagline, padding, yOff, format.width - padding * 2, taglineSize * 1.3)
+    yOff += 4
+    ctx.globalAlpha = 1
+  }
+
+  if (state.subtext) {
+    ctx.fillStyle = state.subtextColor || autoColor
+    ctx.globalAlpha = state.subtextColor ? 1 : 0.8
+    ctx.font = `${subtextSize}px ${sFont}`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    wrapText(ctx, state.subtext, padding, yOff, format.width - padding * 2, subtextSize * 1.6)
+    ctx.globalAlpha = 1
+  }
+
+  if (state.ctaText) {
+    const ctaW = Math.max(state.ctaText.length * ctaFontSize * 0.65, 100)
+    const ctaH = ctaFontSize * 2.5
+    const ctaY = format.height - padding - ctaH
+    ctx.fillStyle = state.ctaColor || '#0A0A0A'
+    ctx.fillRect(padding, ctaY, ctaW, ctaH)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = `500 ${ctaFontSize}px ${cFont}`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(state.ctaText.toUpperCase(), padding + ctaW / 2, ctaY + ctaH / 2)
+  }
+
+  ctx.fillStyle = state.brandColor
+  ctx.fillRect(0, format.height - 3, format.width, 3)
+
+  return canvas
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {

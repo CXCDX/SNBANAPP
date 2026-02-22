@@ -4,12 +4,25 @@ import { useAppState } from '../store/AppContext'
 import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
 
+function getCornerPos(position, canvasW, canvasH, elemW, elemH, padding) {
+  switch (position) {
+    case 'top-left':     return { x: padding, y: padding }
+    case 'top-right':    return { x: canvasW - padding - elemW, y: padding }
+    case 'bottom-left':  return { x: padding, y: canvasH - padding - elemH }
+    case 'bottom-right': return { x: canvasW - padding - elemW, y: canvasH - padding - elemH }
+    default:             return { x: padding, y: padding }
+  }
+}
+
 export default function BannerCanvas({ format, scale = 1 }) {
   const {
     image, headline, tagline, subtext, ctaText, badge, logo, brandColor,
-    headlineFont, headlineColor, taglineFont, taglineColor,
-    subtextFont, subtextColor, ctaFont, ctaColor,
+    headlineFont, headlineColor, headlineSize,
+    taglineFont, taglineColor, taglineSize,
+    subtextFont, subtextColor, subtextSize,
+    ctaFont, ctaColor, ctaSize,
     activeBadgeSrc, focusPoint,
+    logoPosition, logoSize, badgePosition,
   } = useAppState()
   const stageRef = useRef(null)
   const [bgImage, setBgImage] = useState(null)
@@ -58,18 +71,18 @@ export default function BannerCanvas({ format, scale = 1 }) {
   }, [bgImage, width, height, focusPoint])
 
   const s = Math.min(width, height) / 1080
-  const headlineSize = Math.round(48 * s)
-  const taglineSize = Math.round(28 * s)
-  const subtextSize = Math.round(20 * s)
-  const ctaFontSize = Math.round(18 * s)
+  const hSize = Math.round((headlineSize || 48) * s)
+  const tSize = Math.round((taglineSize || 28) * s)
+  const sSize = Math.round((subtextSize || 20) * s)
+  const cSize = Math.round((ctaSize || 18) * s)
   const badgeFontSize = Math.round(14 * s)
-  const logoHeight = Math.round(40 * s)
+  const logoH = Math.round((logoSize || 40) * s)
   const padding = Math.round(40 * s)
   const badgeImgSize = Math.round(60 * s)
   const textAreaY = height * 0.50
 
-  const headlineEndY = headline ? textAreaY + headlineSize * 1.2 + 6 : textAreaY
-  const taglineEndY = tagline ? headlineEndY + taglineSize * 1.3 + 4 : headlineEndY
+  const headlineEndY = headline ? textAreaY + hSize * 1.2 + 6 : textAreaY
+  const taglineEndY = tagline ? headlineEndY + tSize * 1.3 + 4 : headlineEndY
   const subtextStartY = taglineEndY + 4
 
   return (
@@ -101,52 +114,42 @@ export default function BannerCanvas({ format, scale = 1 }) {
           />
         )}
 
-        {/* Badge image from library */}
-        {badgeImage && (
-          <KonvaImage
-            image={badgeImage}
-            x={width - padding - badgeImgSize}
-            y={padding}
-            width={badgeImgSize}
-            height={badgeImgSize * (badgeImage.height / badgeImage.width)}
-          />
-        )}
+        {/* Badge image from library — positioned */}
+        {badgeImage && (() => {
+          const bh = badgeImgSize * (badgeImage.height / badgeImage.width)
+          const bp = getCornerPos(badgePosition, width, height, badgeImgSize, bh, padding)
+          return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSize} height={bh} />
+        })()}
 
-        {/* Badge text fallback */}
-        {badge && !badgeImage && (
-          <Group x={width - padding - Math.max(badge.length * badgeFontSize * 0.65, 60)} y={padding}>
-            <Rect
-              width={Math.max(badge.length * badgeFontSize * 0.65, 60)}
-              height={badgeFontSize * 2.2}
-              fill={brandColor}
-            />
-            <Text
-              text={badge}
-              width={Math.max(badge.length * badgeFontSize * 0.65, 60)}
-              height={badgeFontSize * 2.2}
-              align="center" verticalAlign="middle"
-              fontSize={badgeFontSize}
-              fontFamily={headlineFont}
-              fontStyle="bold"
-              fill="#FFFFFF"
-            />
-          </Group>
-        )}
+        {/* Badge text fallback — positioned */}
+        {badge && !badgeImage && (() => {
+          const bw = Math.max(badge.length * badgeFontSize * 0.65, 60)
+          const bh = badgeFontSize * 2.2
+          const bp = getCornerPos(badgePosition, width, height, bw, bh, padding)
+          return (
+            <Group x={bp.x} y={bp.y}>
+              <Rect width={bw} height={bh} fill={brandColor} />
+              <Text
+                text={badge} width={bw} height={bh}
+                align="center" verticalAlign="middle"
+                fontSize={badgeFontSize} fontFamily={headlineFont} fontStyle="bold" fill="#FFFFFF"
+              />
+            </Group>
+          )
+        })()}
 
-        {logoImage && (
-          <KonvaImage
-            image={logoImage}
-            x={padding} y={padding}
-            height={logoHeight}
-            width={logoHeight * (logoImage.width / logoImage.height)}
-          />
-        )}
+        {/* Logo — positioned */}
+        {logoImage && (() => {
+          const lw = logoH * (logoImage.width / logoImage.height)
+          const lp = getCornerPos(logoPosition, width, height, lw, logoH, padding)
+          return <KonvaImage image={logoImage} x={lp.x} y={lp.y} height={logoH} width={lw} />
+        })()}
 
         {headline && (
           <Text
             text={headline.toUpperCase()}
             x={padding} y={textAreaY} width={width - padding * 2}
-            fontSize={headlineSize}
+            fontSize={hSize}
             fontFamily={headlineFont}
             fontStyle="bold"
             fill={headlineColor || autoTextColor}
@@ -158,7 +161,7 @@ export default function BannerCanvas({ format, scale = 1 }) {
           <Text
             text={tagline}
             x={padding} y={headlineEndY} width={width - padding * 2}
-            fontSize={taglineSize}
+            fontSize={tSize}
             fontFamily={taglineFont}
             fontStyle="italic"
             fill={taglineColor || autoTextColor}
@@ -171,7 +174,7 @@ export default function BannerCanvas({ format, scale = 1 }) {
           <Text
             text={subtext}
             x={padding} y={subtextStartY} width={width - padding * 2}
-            fontSize={subtextSize}
+            fontSize={sSize}
             fontFamily={subtextFont}
             fill={subtextColor || autoTextColor}
             opacity={subtextColor ? 1 : 0.8}
@@ -180,18 +183,18 @@ export default function BannerCanvas({ format, scale = 1 }) {
         )}
 
         {ctaText && (
-          <Group x={padding} y={height - padding - ctaFontSize * 2.8}>
+          <Group x={padding} y={height - padding - cSize * 2.8}>
             <Rect
-              width={Math.max(ctaText.length * ctaFontSize * 0.65, 100)}
-              height={ctaFontSize * 2.5}
+              width={Math.max(ctaText.length * cSize * 0.65, 100)}
+              height={cSize * 2.5}
               fill={ctaColor || '#0A0A0A'}
             />
             <Text
               text={ctaText.toUpperCase()}
-              width={Math.max(ctaText.length * ctaFontSize * 0.65, 100)}
-              height={ctaFontSize * 2.5}
+              width={Math.max(ctaText.length * cSize * 0.65, 100)}
+              height={cSize * 2.5}
               align="center" verticalAlign="middle"
-              fontSize={ctaFontSize}
+              fontSize={cSize}
               fontFamily={ctaFont}
               fontStyle="500"
               fill="#FFFFFF"

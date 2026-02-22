@@ -1,8 +1,9 @@
 import ImageUpload from './ImageUpload'
 import TextInputs from './TextInputs'
-import BrandSettings from './BrandSettings'
+import LogoSelector from './LogoSelector'
 import BadgeLibrary from './BadgeLibrary'
 import FontManager from './FontManager'
+import CsvBulkUpload from './CsvBulkUpload'
 
 export default function LeftPanel() {
   return (
@@ -41,7 +42,11 @@ export default function LeftPanel() {
 
           <div className="h-px bg-border" />
 
-          <BrandSettings />
+          <LogoSelector />
+
+          <div className="h-px bg-border" />
+
+          <CsvBulkUpload />
         </div>
       </aside>
     </div>

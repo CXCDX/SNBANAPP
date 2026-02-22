@@ -1,15 +1,19 @@
-import { useAppState } from './store/AppContext'
+import { useCallback } from 'react'
+import { useAppState, useAppDispatch } from './store/AppContext'
 import LeftPanel from './components/LeftPanel'
 import CenterCanvas from './components/CenterCanvas'
 import RightPanel from './components/RightPanel'
 import ExpandedPreview from './components/ExpandedPreview'
+import InlineEditor from './components/InlineEditor'
+import DesignPoliceModal from './components/DesignPoliceModal'
 import ToastContainer from './components/Toast'
 import MobileTabBar from './components/MobileTabBar'
 import ImageUpload from './components/ImageUpload'
 import TextInputs from './components/TextInputs'
-import BrandSettings from './components/BrandSettings'
+import LogoSelector from './components/LogoSelector'
 import BadgeLibrary from './components/BadgeLibrary'
 import FontManager from './components/FontManager'
+import CsvBulkUpload from './components/CsvBulkUpload'
 import ExportPanel from './components/ExportPanel'
 
 function MobileView() {
@@ -36,7 +40,9 @@ function MobileView() {
           <div className="h-px bg-border" />
           <BadgeLibrary />
           <div className="h-px bg-border" />
-          <BrandSettings />
+          <LogoSelector />
+          <div className="h-px bg-border" />
+          <CsvBulkUpload />
         </div>
       )}
       {activeTab === 'preview' && (
@@ -65,11 +71,24 @@ function DesktopView() {
 }
 
 export default function App() {
+  const { editingFormat } = useAppState()
+  const dispatch = useAppDispatch()
+
+  const handleExportAnyway = useCallback(() => {
+    // Close modal and trigger export
+    dispatch({ type: 'SET_SHOW_DESIGN_POLICE', payload: false })
+    // The export is triggered directly from ExportPanel's doExport
+    // We dispatch a custom event to signal "export anyway"
+    window.dispatchEvent(new CustomEvent('banner-export-anyway'))
+  }, [dispatch])
+
   return (
     <>
       <DesktopView />
       <MobileView />
       <ExpandedPreview />
+      {editingFormat && <InlineEditor />}
+      <DesignPoliceModal onExportAnyway={handleExportAnyway} />
       <ToastContainer />
     </>
   )
