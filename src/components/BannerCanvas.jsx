@@ -5,7 +5,7 @@ import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
 
 export default function BannerCanvas({ format, scale = 1 }) {
-  const { image, headline, subtext, ctaText, badge, logo, brandColor } = useAppState()
+  const { image, headline, tagline, subtext, ctaText, badge, logo, brandColor } = useAppState()
   const stageRef = useRef(null)
   const [bgImage, setBgImage] = useState(null)
   const [logoImage, setLogoImage] = useState(null)
@@ -45,12 +45,19 @@ export default function BannerCanvas({ format, scale = 1 }) {
 
   const baseFontScale = Math.min(width, height) / 1080
   const headlineSize = Math.round(48 * baseFontScale)
+  const taglineSize = Math.round(28 * baseFontScale)
   const subtextSize = Math.round(20 * baseFontScale)
   const ctaFontSize = Math.round(18 * baseFontScale)
   const badgeSize = Math.round(14 * baseFontScale)
   const logoHeight = Math.round(40 * baseFontScale)
   const padding = Math.round(40 * baseFontScale)
-  const textAreaY = height * 0.55
+  const textAreaY = height * 0.50
+
+  // Compute Y offsets for stacked text
+  let yOffset = textAreaY
+  const headlineEndY = headline ? yOffset + headlineSize * 1.2 + 6 : yOffset
+  const taglineEndY = tagline ? headlineEndY + taglineSize * 1.3 + 4 : headlineEndY
+  const subtextStartY = taglineEndY + 4
 
   return (
     <Stage
@@ -59,7 +66,6 @@ export default function BannerCanvas({ format, scale = 1 }) {
       height={displayHeight}
       scaleX={scale}
       scaleY={scale}
-      style={{ background: '#FAFAF8' }}
       aria-label={`Banner preview for ${format.name}`}
     >
       <Layer>
@@ -129,15 +135,30 @@ export default function BannerCanvas({ format, scale = 1 }) {
           />
         )}
 
+        {tagline && (
+          <Text
+            text={tagline}
+            x={padding} y={headlineEndY}
+            width={width - padding * 2}
+            fontSize={taglineSize}
+            fontFamily="Playfair Display"
+            fontStyle="italic"
+            fill={textColor}
+            opacity={0.9}
+            lineHeight={1.3}
+            wrap="word"
+          />
+        )}
+
         {subtext && (
           <Text
             text={subtext}
-            x={padding} y={textAreaY + headlineSize * 1.3 + 8}
+            x={padding} y={subtextStartY}
             width={width - padding * 2}
             fontSize={subtextSize}
             fontFamily="DM Mono"
             fill={textColor}
-            opacity={0.85}
+            opacity={0.8}
             lineHeight={1.6}
             wrap="word"
           />

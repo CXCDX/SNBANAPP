@@ -6,8 +6,8 @@ export default function FormatChecklist({ enabledFormats, onToggle }) {
   return (
     <div className="space-y-6">
       {platforms.map(platform => (
-        <div key={platform} className="space-y-2">
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-secondary">
+        <div key={platform} className="space-y-3">
+          <p className="font-editorial text-[13px] italic text-secondary">
             {getPlatformFolder(platform)}
           </p>
           {AD_FORMATS.filter(f => f.platform === platform).map(format => (

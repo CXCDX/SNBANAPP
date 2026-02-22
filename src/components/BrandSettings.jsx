@@ -24,14 +24,14 @@ export default function BrandSettings() {
   })
 
   return (
-    <div className="space-y-5">
-      <h3 className="text-[10px] font-mono uppercase tracking-[0.15em] text-ink">
+    <div className="space-y-7">
+      <h3 className="font-editorial text-[18px] text-ink">
         Brand
       </h3>
 
       {/* Logo */}
-      <div className="space-y-1.5">
-        <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-secondary">
+      <div className="space-y-2">
+        <label className="font-editorial text-[14px] italic text-ink">
           Logo
         </label>
         <div
@@ -43,17 +43,17 @@ export default function BrandSettings() {
           <input {...getInputProps()} aria-label="File input for brand logo" />
           {logo ? (
             <div className="flex items-center gap-3">
-              <img src={logo} alt="Brand logo" className="h-6 w-auto object-contain" />
-              <span className="text-[10px] font-mono text-secondary hover:underline">Replace</span>
+              <img src={logo} alt="Brand logo" className="h-7 w-auto object-contain" />
+              <span className="text-[11px] font-mono text-secondary hover:underline">Replace</span>
             </div>
           ) : (
-            <p className="text-[10px] font-mono text-secondary hover:underline">Upload logo</p>
+            <p className="text-[11px] font-mono text-secondary hover:underline">Upload logo</p>
           )}
         </div>
         {logo && (
           <button
             onClick={() => dispatch({ type: 'SET_LOGO', payload: null })}
-            className="text-[10px] font-mono text-secondary hover:underline"
+            className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
             aria-label="Remove logo"
           >
             Remove
@@ -62,8 +62,8 @@ export default function BrandSettings() {
       </div>
 
       {/* Brand color */}
-      <div className="space-y-1.5">
-        <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-secondary">
+      <div className="space-y-2">
+        <label className="font-editorial text-[14px] italic text-ink">
           Color
         </label>
         <div className="flex items-center gap-3">
@@ -71,10 +71,10 @@ export default function BrandSettings() {
             type="color"
             value={brandColor}
             onChange={(e) => dispatch({ type: 'SET_BRAND_COLOR', payload: e.target.value })}
-            className="w-6 h-6"
+            className="w-7 h-7"
             aria-label="Brand primary color picker"
           />
-          <span className="text-[10px] font-mono text-secondary uppercase">{brandColor}</span>
+          <span className="text-[11px] font-mono text-secondary">{brandColor}</span>
         </div>
       </div>
     </div>

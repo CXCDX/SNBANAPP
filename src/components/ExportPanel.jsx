@@ -37,12 +37,8 @@ export default function ExportPanel() {
       let bgImg = null
       let logoImg = null
 
-      if (state.image) {
-        bgImg = await loadImage(state.image.src)
-      }
-      if (state.logo) {
-        logoImg = await loadImage(state.logo)
-      }
+      if (state.image) bgImg = await loadImage(state.image.src)
+      if (state.logo) logoImg = await loadImage(state.logo)
 
       const textTheme = state.image ? getTextTheme(state.image.luminance) : 'light'
       const textColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
@@ -71,11 +67,12 @@ export default function ExportPanel() {
         const baseFontScale = Math.min(format.width, format.height) / 1080
         const padding = Math.round(40 * baseFontScale)
         const headlineSize = Math.round(48 * baseFontScale)
+        const taglineSize = Math.round(28 * baseFontScale)
         const subtextSize = Math.round(20 * baseFontScale)
         const ctaFontSize = Math.round(18 * baseFontScale)
         const badgeSize = Math.round(14 * baseFontScale)
         const logoHeight = Math.round(40 * baseFontScale)
-        const textAreaY = format.height * 0.55
+        const textAreaY = format.height * 0.50
 
         if (logoImg) {
           const lw = logoHeight * (logoImg.width / logoImg.height)
@@ -87,8 +84,7 @@ export default function ExportPanel() {
           const bh = badgeSize * 2.2
           const bx = format.width - padding - bw
           ctx.fillStyle = state.brandColor
-          roundRect(ctx, bx, padding, bw, bh, 0)
-          ctx.fill()
+          ctx.fillRect(bx, padding, bw, bh)
           ctx.fillStyle = '#FFFFFF'
           ctx.font = `bold ${badgeSize}px "Playfair Display", Georgia, serif`
           ctx.textAlign = 'center'
@@ -96,21 +92,35 @@ export default function ExportPanel() {
           ctx.fillText(state.badge, bx + bw / 2, padding + bh / 2)
         }
 
+        let yOff = textAreaY
+
         if (state.headline) {
           ctx.fillStyle = textColor
           ctx.font = `bold ${headlineSize}px "Playfair Display", Georgia, serif`
           ctx.textAlign = 'left'
           ctx.textBaseline = 'top'
-          wrapText(ctx, state.headline.toUpperCase(), padding, textAreaY, format.width - padding * 2, headlineSize * 1.1)
+          yOff = wrapText(ctx, state.headline.toUpperCase(), padding, yOff, format.width - padding * 2, headlineSize * 1.1)
+          yOff += 6
+        }
+
+        if (state.tagline) {
+          ctx.fillStyle = textColor
+          ctx.globalAlpha = 0.9
+          ctx.font = `italic ${taglineSize}px "Playfair Display", Georgia, serif`
+          ctx.textAlign = 'left'
+          ctx.textBaseline = 'top'
+          yOff = wrapText(ctx, state.tagline, padding, yOff, format.width - padding * 2, taglineSize * 1.3)
+          yOff += 4
+          ctx.globalAlpha = 1
         }
 
         if (state.subtext) {
           ctx.fillStyle = textColor
-          ctx.globalAlpha = 0.85
+          ctx.globalAlpha = 0.8
           ctx.font = `${subtextSize}px "DM Mono", monospace`
           ctx.textAlign = 'left'
           ctx.textBaseline = 'top'
-          wrapText(ctx, state.subtext, padding, textAreaY + headlineSize * 1.3 + 8, format.width - padding * 2, subtextSize * 1.4)
+          wrapText(ctx, state.subtext, padding, yOff, format.width - padding * 2, subtextSize * 1.6)
           ctx.globalAlpha = 1
         }
 
@@ -147,18 +157,18 @@ export default function ExportPanel() {
   }, [enabledFormats, state, dispatch])
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
-        <h3 className="text-[10px] font-mono uppercase tracking-[0.15em] text-ink mb-4">
-          Export
+        <h3 className="font-editorial text-[18px] text-ink mb-6">
+          Formats
         </h3>
         <FormatChecklist enabledFormats={enabledFormats} onToggle={toggleFormat} />
       </div>
 
-      <div className="flex gap-3 text-[10px] font-mono">
+      <div className="flex gap-3 text-[11px] font-mono">
         <button
           onClick={selectAll}
-          className="text-ink hover:underline bg-transparent border-none cursor-pointer"
+          className="text-ink hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Select all formats"
         >
           All
@@ -166,21 +176,21 @@ export default function ExportPanel() {
         <span className="text-secondary">/</span>
         <button
           onClick={selectNone}
-          className="text-secondary hover:underline bg-transparent border-none cursor-pointer"
+          className="text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Deselect all formats"
         >
           None
         </button>
       </div>
 
-      {/* The one accent moment — sharp black CTA */}
+      {/* The ONLY heavy element */}
       <button
         onClick={handleExport}
         disabled={state.isExporting || enabledFormats.length === 0}
-        className="w-full py-3 px-4 text-[11px] font-mono uppercase tracking-[0.15em]
+        className="w-full py-3.5 px-4 text-[11px] font-mono uppercase tracking-[0.15em]
           bg-ink text-bg
           hover:bg-bg hover:text-ink
-          disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-ink disabled:hover:text-bg
+          disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-ink disabled:hover:text-bg
           transition-all duration-200 cursor-pointer"
         style={{ border: '1px solid #0A0A0A' }}
         aria-label={state.isExporting ? 'Exporting...' : `Export ${enabledFormats.length} formats as ZIP`}
@@ -201,20 +211,7 @@ function loadImage(src) {
   })
 }
 
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  ctx.lineTo(x + r, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.closePath()
-}
-
+// Returns the Y position after the last line
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   const words = text.split(' ')
   let line = ''
@@ -232,4 +229,5 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
     }
   }
   ctx.fillText(line.trim(), x, offsetY)
+  return offsetY + lineHeight
 }

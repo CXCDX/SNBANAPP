@@ -14,14 +14,14 @@ function MobileView() {
   const { activeTab } = useAppState()
 
   return (
-    <div className="md:hidden flex flex-col h-screen pb-12">
+    <div className="md:hidden flex flex-col h-screen pb-12 bg-bg">
       {activeTab === 'controls' && (
-        <div className="flex-1 overflow-y-auto px-5 py-8 space-y-10">
-          <header>
-            <p className="font-editorial text-[11px] uppercase tracking-[0.15em] leading-tight text-ink">
+        <div className="flex-1 overflow-y-auto px-6 py-10 space-y-12">
+          <header className="space-y-0.5">
+            <p className="font-editorial text-[15px] uppercase tracking-[0.12em] leading-none text-ink">
               Banner Studio
             </p>
-            <p className="font-editorial text-[11px] uppercase tracking-[0.15em] leading-tight text-secondary">
+            <p className="font-editorial text-[11px] uppercase tracking-[0.12em] leading-none text-secondary">
               SharkNinja
             </p>
           </header>
@@ -39,7 +39,7 @@ function MobileView() {
         </div>
       )}
       {activeTab === 'export' && (
-        <div className="flex-1 overflow-y-auto px-5 py-8">
+        <div className="flex-1 overflow-y-auto px-6 py-10">
           <ExportPanel />
         </div>
       )}

@@ -2,10 +2,10 @@
 
 @theme {
   --color-bg: #FAFAF8;
-  --color-surface: #FAFAF8;
+  --color-surface: #FFFFFF;
   --color-border: #E0E0DC;
   --color-ink: #0A0A0A;
-  --color-secondary: #8A8A86;
+  --color-secondary: #999994;
   --color-danger: #FF3D57;
   --color-sidebar: #0A0A0A;
 
@@ -29,9 +29,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Thin scrollbar — editorial restraint */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -39,23 +38,19 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-secondary);
-}
 
-/* Focus: thin black outline */
 :focus-visible {
   outline: 1px solid var(--color-ink);
   outline-offset: 2px;
 }
 
-/* Dot-grid pattern for canvas area */
+/* Very subtle dot-grid */
 .dot-grid {
-  background-image: radial-gradient(circle, var(--color-border) 0.8px, transparent 0.8px);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle, #EBEBEB 0.6px, transparent 0.6px);
+  background-size: 24px 24px;
 }
 
-/* Toast animations */
+/* Toast */
 @keyframes slide-up {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -71,33 +66,33 @@ body {
   animation: slide-down 0.3s ease-in forwards;
 }
 
-/* Editorial input — bottom border only */
+/* Input — bottom border only, nothing else */
 .input-editorial {
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 0.5px solid var(--color-border);
-  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 0;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
   color: var(--color-ink);
   transition: border-color 0.2s ease;
 }
 .input-editorial::placeholder {
-  color: var(--color-border);
+  color: #C8C8C4;
 }
 .input-editorial:focus {
   outline: none;
   border-bottom-color: var(--color-ink);
 }
 
-/* Checkbox — custom minimal */
+/* Checkbox — minimal square */
 .checkbox-editorial {
   appearance: none;
-  width: 14px;
-  height: 14px;
-  border: 0.5px solid var(--color-ink);
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--color-ink);
   background: transparent;
   cursor: pointer;
   position: relative;
@@ -109,19 +104,19 @@ body {
 .checkbox-editorial:checked::after {
   content: '';
   position: absolute;
-  top: 2px;
+  top: 1px;
   left: 4px;
-  width: 4px;
+  width: 3px;
   height: 7px;
   border: solid var(--color-bg);
   border-width: 0 1.5px 1.5px 0;
   transform: rotate(45deg);
 }
 
-/* Color input — strip browser chrome */
+/* Color input */
 input[type="color"] {
   -webkit-appearance: none;
-  border: 0.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   padding: 0;
   cursor: pointer;
 }

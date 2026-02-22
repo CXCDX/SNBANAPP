@@ -8,13 +8,11 @@ export default function CenterCanvas() {
   const dispatch = useAppDispatch()
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 })
 
-  // Pick current format or default to Instagram Feed
   const format = useMemo(() => {
     if (selectedFormat) return AD_FORMATS.find(f => f.id === selectedFormat)
     return AD_FORMATS[0]
   }, [selectedFormat])
 
-  // Measure container for responsive scaling
   useEffect(() => {
     const handleResize = () => {
       const el = document.getElementById('canvas-container')
@@ -27,10 +25,9 @@ export default function CenterCanvas() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Calculate scale to fit within container with breathing room
-  const padding = 48
+  const padding = 80
   const availW = containerSize.width - padding * 2
-  const availH = containerSize.height - padding * 2 - 60 // account for format tabs
+  const availH = containerSize.height - padding * 2 - 80
   const scaleW = availW / format.width
   const scaleH = availH / format.height
   const scale = Math.min(scaleW, scaleH, 1)
@@ -38,39 +35,39 @@ export default function CenterCanvas() {
   return (
     <main
       id="canvas-container"
-      className="flex-1 flex flex-col items-center justify-center bg-bg min-h-0 p-6 overflow-hidden"
+      className="flex-1 flex flex-col items-center justify-center dot-grid min-h-0 overflow-hidden"
       aria-label="Banner preview area"
     >
-      {/* Format selector tabs */}
-      <div className="flex gap-1 mb-4 flex-wrap justify-center">
+      {/* Format tabs — bottom border only on active */}
+      <nav className="flex gap-8 mb-10" aria-label="Format selector">
         {AD_FORMATS.map((f) => (
           <button
             key={f.id}
             onClick={() => dispatch({ type: 'SET_SELECTED_FORMAT', payload: f.id })}
-            className={`px-3 py-1.5 text-xs font-mono rounded-md transition-all duration-200
-              ${format.id === f.id
-                ? 'bg-accent/15 text-accent border border-accent/30'
-                : 'text-text-secondary border border-transparent hover:text-text-primary hover:bg-surface'
-              }`}
+            className="text-[11px] font-mono bg-transparent border-none cursor-pointer pb-1 transition-all duration-200"
+            style={{
+              color: format.id === f.id ? '#0A0A0A' : '#999994',
+              borderBottom: format.id === f.id ? '2px solid #0A0A0A' : '2px solid transparent',
+            }}
             aria-label={`Switch to ${f.name} format`}
             aria-pressed={format.id === f.id}
           >
-            {f.width}×{f.height}
+            {f.width}&times;{f.height}
           </button>
         ))}
-      </div>
+      </nav>
 
-      {/* Canvas */}
-      <div className="rounded-lg overflow-hidden border border-border shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+      {/* Canvas — floating, subtle shadow, NO border */}
+      <div style={{ boxShadow: '0 4px 40px rgba(0,0,0,0.06)' }}>
         <BannerCanvas format={format} scale={scale} />
       </div>
 
-      {/* Format info */}
-      <div className="mt-3 text-center">
-        <p className="text-sm font-heading font-semibold text-text-primary">{format.name}</p>
-        <p className="text-xs font-mono text-text-secondary">
-          {format.width}×{format.height}px
-          {image && ` — Scale: ${Math.round(scale * 100)}%`}
+      {/* Format label */}
+      <div className="mt-6 text-center">
+        <p className="font-editorial text-[14px] text-ink">{format.name}</p>
+        <p className="text-[10px] font-mono text-secondary mt-1">
+          {format.width} &times; {format.height}
+          {image && ` / ${Math.round(scale * 100)}%`}
         </p>
       </div>
     </main>

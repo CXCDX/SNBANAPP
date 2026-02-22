@@ -41,37 +41,35 @@ export default function ImageUpload() {
   })
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-[10px] font-mono uppercase tracking-[0.15em] text-ink">
+    <div className="space-y-4">
+      <h3 className="font-editorial text-[18px] text-ink">
         Image
       </h3>
       <div
         {...getRootProps()}
-        className={`cursor-pointer transition-colors duration-200
-          ${isDragActive ? 'opacity-60' : ''}
-        `}
+        className={`cursor-pointer transition-opacity duration-200 ${isDragActive ? 'opacity-50' : ''}`}
         role="button"
-        aria-label="Upload background image by dropping a file or clicking to browse"
+        aria-label="Upload background image"
       >
         <input {...getInputProps()} aria-label="File input for background image" />
         {image ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <img
               src={image.src}
               alt="Uploaded preview"
-              className="w-full h-28 object-cover"
+              className="w-full h-32 object-cover"
             />
-            <p className="text-[10px] font-mono text-secondary truncate">{image.name}</p>
+            <p className="text-[11px] font-mono text-secondary truncate">{image.name}</p>
             <p className="text-[10px] font-mono text-secondary">
-              {image.width} &times; {image.height} &mdash; L:{Math.round(image.luminance)}
+              {image.width} &times; {image.height}
             </p>
           </div>
         ) : (
-          <div className="py-8 text-center" style={{ border: '0.5px dashed #E0E0DC' }}>
-            <p className="text-[11px] font-mono text-secondary">
+          <div className="py-10 text-center" style={{ border: '1px dashed #E0E0DC' }}>
+            <p className="font-editorial text-[14px] italic text-secondary">
               {isDragActive ? 'Drop here' : 'Drop image or click'}
             </p>
-            <p className="text-[10px] font-mono text-border mt-1">PNG, JPG, WEBP</p>
+            <p className="text-[10px] font-mono text-secondary mt-2">PNG, JPG, WEBP</p>
           </div>
         )}
       </div>
@@ -81,7 +79,7 @@ export default function ImageUpload() {
             e.stopPropagation()
             dispatch({ type: 'CLEAR_IMAGE' })
           }}
-          className="text-[10px] font-mono text-secondary hover:underline transition-all"
+          className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Remove uploaded image"
         >
           Remove

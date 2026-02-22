@@ -5,9 +5,9 @@ function CharInput({ label, value, onChange, maxLength, placeholder }) {
   const counterColor = atLimit ? 'text-danger' : 'text-secondary'
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <div className="flex justify-between items-baseline">
-        <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-secondary">
+        <label className="font-editorial text-[14px] italic text-ink">
           {label}
         </label>
         {maxLength && (
@@ -30,13 +30,13 @@ function CharInput({ label, value, onChange, maxLength, placeholder }) {
 }
 
 export default function TextInputs() {
-  const { headline, subtext, ctaText, badge } = useAppState()
+  const { headline, tagline, subtext, ctaText, badge } = useAppState()
   const dispatch = useAppDispatch()
 
   return (
-    <div className="space-y-5">
-      <h3 className="text-[10px] font-mono uppercase tracking-[0.15em] text-ink">
-        Text Content
+    <div className="space-y-7">
+      <h3 className="font-editorial text-[18px] text-ink">
+        Text
       </h3>
       <CharInput
         label="Headline"
@@ -44,6 +44,12 @@ export default function TextInputs() {
         onChange={(v) => dispatch({ type: 'SET_HEADLINE', payload: v })}
         maxLength={30}
         placeholder="Main headline text"
+      />
+      <CharInput
+        label="Tagline"
+        value={tagline}
+        onChange={(v) => dispatch({ type: 'SET_TAGLINE', payload: v })}
+        placeholder="3 Makine Bir Arada"
       />
       <CharInput
         label="Subtext"

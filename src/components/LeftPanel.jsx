@@ -8,15 +8,15 @@ export default function LeftPanel() {
       {/* Black sidebar — silent power */}
       <div className="w-10 bg-sidebar shrink-0" />
 
-      {/* Controls */}
-      <aside className="w-[200px] shrink-0 overflow-y-auto" style={{ borderRight: '0.5px solid #E0E0DC' }}>
-        <div className="px-5 py-8 space-y-10">
+      {/* Controls — pure white, zero noise */}
+      <aside className="w-[220px] shrink-0 bg-surface overflow-y-auto" style={{ borderRight: '0.5px solid #E0E0DC' }}>
+        <div className="px-6 pt-10 pb-16 space-y-12">
           {/* Masthead */}
-          <header>
-            <p className="font-editorial text-[11px] uppercase tracking-[0.15em] leading-tight text-ink">
+          <header className="space-y-0.5">
+            <p className="font-editorial text-[15px] uppercase tracking-[0.12em] leading-none text-ink">
               Banner Studio
             </p>
-            <p className="font-editorial text-[11px] uppercase tracking-[0.15em] leading-tight text-secondary">
+            <p className="font-editorial text-[11px] uppercase tracking-[0.12em] leading-none text-secondary">
               SharkNinja
             </p>
           </header>

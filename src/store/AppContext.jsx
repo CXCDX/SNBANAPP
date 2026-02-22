@@ -8,6 +8,7 @@ const initialState = {
   image: null,        // { src: dataURL, name, width, height, luminance }
   // Text
   headline: '',
+  tagline: '',
   subtext: '',
   ctaText: '',
   badge: '',
@@ -32,6 +33,8 @@ function appReducer(state, action) {
       return { ...state, image: null }
     case 'SET_HEADLINE':
       return { ...state, headline: action.payload.slice(0, 30) }
+    case 'SET_TAGLINE':
+      return { ...state, tagline: action.payload }
     case 'SET_SUBTEXT':
       return { ...state, subtext: action.payload.slice(0, 90) }
     case 'SET_CTA':
