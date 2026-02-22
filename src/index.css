@@ -1,18 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0A0A0A;
-  --color-surface: #1E1E1E;
-  --color-border: #2A2A2A;
-  --color-accent: #00C4FF;
-  --color-cta: #FF6B35;
-  --color-text-primary: #F5F5F5;
-  --color-text-secondary: #9A9A9A;
-  --color-danger: #FF4444;
+  --color-bg: #FAFAF8;
+  --color-surface: #FAFAF8;
+  --color-border: #E0E0DC;
+  --color-ink: #0A0A0A;
+  --color-secondary: #8A8A86;
+  --color-danger: #FF3D57;
+  --color-sidebar: #0A0A0A;
 
-  --font-heading: 'Barlow Condensed', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-editorial: 'Playfair Display', Georgia, serif;
+  --font-mono: 'DM Mono', 'Courier New', monospace;
 }
 
 * {
@@ -23,62 +21,113 @@ body {
   margin: 0;
   padding: 0;
   background-color: var(--color-bg);
-  color: var(--color-text-primary);
-  font-family: var(--font-body);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Thin scrollbar — editorial restraint */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-bg);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
+  background: var(--color-secondary);
 }
 
+/* Focus: thin black outline */
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 1px solid var(--color-ink);
   outline-offset: 2px;
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+/* Dot-grid pattern for canvas area */
+.dot-grid {
+  background-image: radial-gradient(circle, var(--color-border) 0.8px, transparent 0.8px);
+  background-size: 20px 20px;
 }
 
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-surface) 25%,
-    var(--color-border) 50%,
-    var(--color-surface) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: 4px;
-}
-
+/* Toast animations */
 @keyframes slide-up {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes slide-down {
   from { transform: translateY(0); opacity: 1; }
   to { transform: translateY(100%); opacity: 0; }
 }
-
 .toast-enter {
   animation: slide-up 0.3s ease-out forwards;
 }
-
 .toast-exit {
   animation: slide-down 0.3s ease-in forwards;
+}
+
+/* Editorial input — bottom border only */
+.input-editorial {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid var(--color-border);
+  padding: 6px 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-ink);
+  transition: border-color 0.2s ease;
+}
+.input-editorial::placeholder {
+  color: var(--color-border);
+}
+.input-editorial:focus {
+  outline: none;
+  border-bottom-color: var(--color-ink);
+}
+
+/* Checkbox — custom minimal */
+.checkbox-editorial {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 0.5px solid var(--color-ink);
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+.checkbox-editorial:checked {
+  background: var(--color-ink);
+}
+.checkbox-editorial:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  width: 4px;
+  height: 7px;
+  border: solid var(--color-bg);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+/* Color input — strip browser chrome */
+input[type="color"] {
+  -webkit-appearance: none;
+  border: 0.5px solid var(--color-border);
+  padding: 0;
+  cursor: pointer;
+}
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+  border: none;
 }

@@ -4,11 +4,7 @@ import { useAppState } from '../store/AppContext'
 import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
 
-/**
- * Render a single banner format on a Konva stage.
- * Used both for preview and for export.
- */
-export default function BannerCanvas({ format, scale = 1, interactive = false }) {
+export default function BannerCanvas({ format, scale = 1 }) {
   const { image, headline, subtext, ctaText, badge, logo, brandColor } = useAppState()
   const stageRef = useRef(null)
   const [bgImage, setBgImage] = useState(null)
@@ -18,7 +14,6 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
   const displayWidth = width * scale
   const displayHeight = height * scale
 
-  // Load background image
   useEffect(() => {
     if (!image) { setBgImage(null); return }
     const img = new window.Image()
@@ -27,7 +22,6 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
     img.src = image.src
   }, [image])
 
-  // Load logo
   useEffect(() => {
     if (!logo) { setLogoImage(null); return }
     const img = new window.Image()
@@ -36,7 +30,6 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
     img.src = logo
   }, [logo])
 
-  // Compute text theme based on luminance
   const textTheme = useMemo(() => {
     if (!image) return 'light'
     return getTextTheme(image.luminance)
@@ -45,13 +38,11 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
   const textColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
   const overlayGradient = useMemo(() => getOverlayGradient(textTheme), [textTheme])
 
-  // Smart crop
   const crop = useMemo(() => {
     if (!bgImage) return null
     return getCenterCrop(bgImage.width, bgImage.height, width, height)
   }, [bgImage, width, height])
 
-  // Responsive font sizes based on format
   const baseFontScale = Math.min(width, height) / 1080
   const headlineSize = Math.round(48 * baseFontScale)
   const subtextSize = Math.round(20 * baseFontScale)
@@ -59,8 +50,6 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
   const badgeSize = Math.round(14 * baseFontScale)
   const logoHeight = Math.round(40 * baseFontScale)
   const padding = Math.round(40 * baseFontScale)
-
-  // Layout: text area at the bottom
   const textAreaY = height * 0.55
 
   return (
@@ -70,46 +59,37 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
       height={displayHeight}
       scaleX={scale}
       scaleY={scale}
-      style={{ background: '#0A0A0A' }}
+      style={{ background: '#FAFAF8' }}
       aria-label={`Banner preview for ${format.name}`}
     >
       <Layer>
-        {/* Background */}
         <Rect width={width} height={height} fill="#1E1E1E" />
 
-        {/* Background image with smart crop */}
         {bgImage && crop && (
           <KonvaImage
             image={bgImage}
-            x={0}
-            y={0}
-            width={width}
-            height={height}
+            x={0} y={0}
+            width={width} height={height}
             crop={{ x: crop.sx, y: crop.sy, width: crop.sWidth, height: crop.sHeight }}
           />
         )}
 
-        {/* Gradient overlay for text readability */}
         {bgImage && (
           <Rect
-            x={0}
-            y={height * 0.3}
-            width={width}
-            height={height * 0.7}
+            x={0} y={height * 0.3}
+            width={width} height={height * 0.7}
             fillLinearGradientStartPoint={{ x: 0, y: 0 }}
             fillLinearGradientEndPoint={{ x: 0, y: height * 0.7 }}
             fillLinearGradientColorStops={[0, overlayGradient.to, 1, overlayGradient.from]}
           />
         )}
 
-        {/* Badge */}
         {badge && (
           <Group x={width - padding - Math.max(badge.length * badgeSize * 0.65, 60)} y={padding}>
             <Rect
               width={Math.max(badge.length * badgeSize * 0.65, 60)}
               height={badgeSize * 2.2}
               fill={brandColor}
-              cornerRadius={4}
             />
             <Text
               text={badge}
@@ -118,64 +98,57 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
               align="center"
               verticalAlign="middle"
               fontSize={badgeSize}
-              fontFamily="Barlow Condensed"
+              fontFamily="Playfair Display"
               fontStyle="bold"
               fill="#FFFFFF"
             />
           </Group>
         )}
 
-        {/* Logo */}
         {logoImage && (
           <KonvaImage
             image={logoImage}
-            x={padding}
-            y={padding}
+            x={padding} y={padding}
             height={logoHeight}
             width={logoHeight * (logoImage.width / logoImage.height)}
           />
         )}
 
-        {/* Headline */}
         {headline && (
           <Text
             text={headline.toUpperCase()}
-            x={padding}
-            y={textAreaY}
+            x={padding} y={textAreaY}
             width={width - padding * 2}
             fontSize={headlineSize}
-            fontFamily="Barlow Condensed"
+            fontFamily="Playfair Display"
             fontStyle="bold"
             fill={textColor}
             lineHeight={1.1}
+            letterSpacing={2}
             wrap="word"
           />
         )}
 
-        {/* Subtext */}
         {subtext && (
           <Text
             text={subtext}
-            x={padding}
-            y={textAreaY + headlineSize * 1.3 + 8}
+            x={padding} y={textAreaY + headlineSize * 1.3 + 8}
             width={width - padding * 2}
             fontSize={subtextSize}
-            fontFamily="DM Sans"
+            fontFamily="DM Mono"
             fill={textColor}
             opacity={0.85}
-            lineHeight={1.4}
+            lineHeight={1.6}
             wrap="word"
           />
         )}
 
-        {/* CTA Button */}
         {ctaText && (
           <Group x={padding} y={height - padding - ctaFontSize * 2.8}>
             <Rect
               width={Math.max(ctaText.length * ctaFontSize * 0.65, 100)}
               height={ctaFontSize * 2.5}
-              fill="#FF6B35"
-              cornerRadius={6}
+              fill="#0A0A0A"
             />
             <Text
               text={ctaText.toUpperCase()}
@@ -184,30 +157,16 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
               align="center"
               verticalAlign="middle"
               fontSize={ctaFontSize}
-              fontFamily="DM Sans"
-              fontStyle="bold"
+              fontFamily="DM Mono"
+              fontStyle="500"
               fill="#FFFFFF"
               letterSpacing={1}
             />
           </Group>
         )}
 
-        {/* Brand color accent strip at bottom */}
-        <Rect
-          x={0}
-          y={height - 4}
-          width={width}
-          height={4}
-          fill={brandColor}
-        />
+        <Rect x={0} y={height - 3} width={width} height={3} fill={brandColor} />
       </Layer>
     </Stage>
   )
-}
-
-/**
- * Get Konva stage ref for export — exposed as a separate utility.
- */
-export function getStageRef(ref) {
-  return ref?.current?.getStage()
 }

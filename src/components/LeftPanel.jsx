@@ -2,33 +2,38 @@ import ImageUpload from './ImageUpload'
 import TextInputs from './TextInputs'
 import BrandSettings from './BrandSettings'
 
-export default function LeftPanel({ className = '' }) {
+export default function LeftPanel() {
   return (
-    <aside
-      className={`w-60 shrink-0 bg-surface border-r border-border overflow-y-auto ${className}`}
-      aria-label="Controls panel"
-    >
-      <div className="p-4 space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-lg font-heading font-bold text-text-primary tracking-wide uppercase">
-            Banner Studio
-          </h1>
-          <p className="text-xs text-text-secondary mt-0.5">SharkNinja Turkey</p>
+    <div className="flex h-full shrink-0" aria-label="Controls panel">
+      {/* Black sidebar — silent power */}
+      <div className="w-10 bg-sidebar shrink-0" />
+
+      {/* Controls */}
+      <aside className="w-[200px] shrink-0 overflow-y-auto" style={{ borderRight: '0.5px solid #E0E0DC' }}>
+        <div className="px-5 py-8 space-y-10">
+          {/* Masthead */}
+          <header>
+            <p className="font-editorial text-[11px] uppercase tracking-[0.15em] leading-tight text-ink">
+              Banner Studio
+            </p>
+            <p className="font-editorial text-[11px] uppercase tracking-[0.15em] leading-tight text-secondary">
+              SharkNinja
+            </p>
+          </header>
+
+          <div className="h-px bg-ink" />
+
+          <ImageUpload />
+
+          <div className="h-px bg-ink" />
+
+          <TextInputs />
+
+          <div className="h-px bg-ink" />
+
+          <BrandSettings />
         </div>
-
-        <div className="h-px bg-border" />
-
-        <ImageUpload />
-
-        <div className="h-px bg-border" />
-
-        <TextInputs />
-
-        <div className="h-px bg-border" />
-
-        <BrandSettings />
-      </div>
-    </aside>
+      </aside>
+    </div>
   )
 }

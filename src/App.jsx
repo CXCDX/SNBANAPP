@@ -8,26 +8,28 @@ import MobileTabBar from './components/MobileTabBar'
 import ImageUpload from './components/ImageUpload'
 import TextInputs from './components/TextInputs'
 import BrandSettings from './components/BrandSettings'
-import PreviewGrid from './components/PreviewGrid'
 import ExportPanel from './components/ExportPanel'
 
 function MobileView() {
   const { activeTab } = useAppState()
 
   return (
-    <div className="md:hidden flex flex-col h-screen pb-14">
+    <div className="md:hidden flex flex-col h-screen pb-12">
       {activeTab === 'controls' && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          <div>
-            <h1 className="text-lg font-heading font-bold text-text-primary tracking-wide uppercase">
+        <div className="flex-1 overflow-y-auto px-5 py-8 space-y-10">
+          <header>
+            <p className="font-editorial text-[11px] uppercase tracking-[0.15em] leading-tight text-ink">
               Banner Studio
-            </h1>
-            <p className="text-xs text-text-secondary mt-0.5">SharkNinja Turkey</p>
-          </div>
+            </p>
+            <p className="font-editorial text-[11px] uppercase tracking-[0.15em] leading-tight text-secondary">
+              SharkNinja
+            </p>
+          </header>
+          <div className="h-px bg-ink" />
           <ImageUpload />
-          <div className="h-px bg-border" />
+          <div className="h-px bg-ink" />
           <TextInputs />
-          <div className="h-px bg-border" />
+          <div className="h-px bg-ink" />
           <BrandSettings />
         </div>
       )}
@@ -37,9 +39,7 @@ function MobileView() {
         </div>
       )}
       {activeTab === 'export' && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          <PreviewGrid />
-          <div className="h-px bg-border" />
+        <div className="flex-1 overflow-y-auto px-5 py-8">
           <ExportPanel />
         </div>
       )}
@@ -50,7 +50,7 @@ function MobileView() {
 
 function DesktopView() {
   return (
-    <div className="hidden md:flex h-screen overflow-hidden">
+    <div className="hidden md:flex h-screen overflow-hidden bg-bg">
       <LeftPanel />
       <CenterCanvas />
       <RightPanel />

@@ -1,18 +1,17 @@
 import { useAppState, useAppDispatch } from '../store/AppContext'
 
 function CharInput({ label, value, onChange, maxLength, placeholder }) {
-  const ratio = maxLength ? value.length / maxLength : 0
-  const isWarning = ratio >= 0.9
-  const counterColor = isWarning ? 'text-danger' : 'text-text-secondary'
+  const atLimit = maxLength && value.length >= maxLength
+  const counterColor = atLimit ? 'text-danger' : 'text-secondary'
 
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between items-center">
-        <label className="text-xs font-mono text-text-secondary uppercase tracking-wider">
+    <div className="space-y-1.5">
+      <div className="flex justify-between items-baseline">
+        <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-secondary">
           {label}
         </label>
         {maxLength && (
-          <span className={`text-xs font-mono ${counterColor} transition-colors`}>
+          <span className={`text-[10px] font-mono tabular-nums ${counterColor} transition-colors`}>
             {value.length}/{maxLength}
           </span>
         )}
@@ -23,8 +22,7 @@ function CharInput({ label, value, onChange, maxLength, placeholder }) {
         onChange={(e) => onChange(e.target.value)}
         maxLength={maxLength}
         placeholder={placeholder}
-        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary/50
-          focus:border-accent focus:shadow-[0_0_8px_rgba(0,196,255,0.25)] focus:outline-none transition-all duration-200"
+        className="input-editorial"
         aria-label={label}
       />
     </div>
@@ -36,8 +34,8 @@ export default function TextInputs() {
   const dispatch = useAppDispatch()
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-heading font-semibold text-text-primary uppercase tracking-wide">
+    <div className="space-y-5">
+      <h3 className="text-[10px] font-mono uppercase tracking-[0.15em] text-ink">
         Text Content
       </h3>
       <CharInput
@@ -61,7 +59,7 @@ export default function TextInputs() {
         placeholder="Shop Now"
       />
       <CharInput
-        label="Badge (optional)"
+        label="Badge"
         value={badge}
         onChange={(v) => dispatch({ type: 'SET_BADGE', payload: v })}
         placeholder="-20% OFF"

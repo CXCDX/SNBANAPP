@@ -24,57 +24,57 @@ export default function BrandSettings() {
   })
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-heading font-semibold text-text-primary uppercase tracking-wide">
-        Brand Settings
+    <div className="space-y-5">
+      <h3 className="text-[10px] font-mono uppercase tracking-[0.15em] text-ink">
+        Brand
       </h3>
 
-      {/* Logo upload */}
-      <div className="space-y-1">
-        <label className="text-xs font-mono text-text-secondary uppercase tracking-wider">
+      {/* Logo */}
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-secondary">
           Logo
         </label>
         <div
           {...getRootProps()}
-          className="border border-dashed border-border rounded-lg p-3 text-center cursor-pointer hover:border-accent/50 transition-colors"
+          className="cursor-pointer"
           role="button"
           aria-label="Upload brand logo"
         >
           <input {...getInputProps()} aria-label="File input for brand logo" />
           {logo ? (
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="Brand logo" className="h-8 w-auto object-contain" />
-              <span className="text-xs text-text-secondary">Click to replace</span>
+            <div className="flex items-center gap-3">
+              <img src={logo} alt="Brand logo" className="h-6 w-auto object-contain" />
+              <span className="text-[10px] font-mono text-secondary hover:underline">Replace</span>
             </div>
           ) : (
-            <p className="text-xs text-text-secondary">Drop logo or click</p>
+            <p className="text-[10px] font-mono text-secondary hover:underline">Upload logo</p>
           )}
         </div>
         {logo && (
           <button
             onClick={() => dispatch({ type: 'SET_LOGO', payload: null })}
-            className="text-xs text-text-secondary hover:text-danger transition-colors"
+            className="text-[10px] font-mono text-secondary hover:underline"
             aria-label="Remove logo"
           >
-            Remove logo
+            Remove
           </button>
         )}
       </div>
 
       {/* Brand color */}
-      <div className="space-y-1">
-        <label className="text-xs font-mono text-text-secondary uppercase tracking-wider">
-          Primary Color
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-secondary">
+          Color
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <input
             type="color"
             value={brandColor}
             onChange={(e) => dispatch({ type: 'SET_BRAND_COLOR', payload: e.target.value })}
-            className="w-8 h-8 rounded border border-border cursor-pointer bg-transparent"
+            className="w-6 h-6"
             aria-label="Brand primary color picker"
           />
-          <span className="text-xs font-mono text-text-secondary uppercase">{brandColor}</span>
+          <span className="text-[10px] font-mono text-secondary uppercase">{brandColor}</span>
         </div>
       </div>
     </div>
