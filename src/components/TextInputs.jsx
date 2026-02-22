@@ -156,15 +156,6 @@ export default function TextInputs() {
         color={state.ctaColor}
         size={state.ctaSize}
       />
-      <CharInput
-        label="Badge"
-        field="badge"
-        value={state.badge}
-        onChange={(v) => dispatch({ type: 'SET_BADGE', payload: v })}
-        placeholder="-20% OFF"
-        font={state.headlineFont}
-        color=""
-      />
     </div>
   )
 }

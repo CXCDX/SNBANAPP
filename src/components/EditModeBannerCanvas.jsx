@@ -200,6 +200,18 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
         onClick={(e) => {
           if (e.target === e.target.getStage() || e.target.name() === 'bg') {
             setSelectedId(null)
+            // Update focus point on background click
+            if (image) {
+              const stage = stageRef.current
+              if (stage) {
+                const pointer = stage.getPointerPosition()
+                if (pointer) {
+                  const fx = Math.max(0, Math.min(1, pointer.x / scale / width))
+                  const fy = Math.max(0, Math.min(1, pointer.y / scale / height))
+                  dispatch({ type: 'SET_FORMAT_FOCUS_POINT', payload: { formatKey, point: { x: fx, y: fy } } })
+                }
+              }
+            }
           }
         }}
       >
@@ -225,14 +237,16 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
             />
           )}
 
-          {/* Badge image */}
-          {badgeImage && !hasBadgeDesigner && (() => {
-            const bh = badgeImgSz * (badgeImage.height / badgeImage.width)
-            const bp = getCornerPos(badgePosition, width, height, badgeImgSz, bh, pad)
-            return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSz} height={bh} />
-          })()}
+          {/* Focus point crosshair */}
+          {image && (
+            <Group x={focusPoint.x * width} y={focusPoint.y * height} listening={false}>
+              <Rect x={-1} y={-16} width={2} height={32} fill="rgba(0,196,255,0.7)" />
+              <Rect x={-16} y={-1} width={32} height={2} fill="rgba(0,196,255,0.7)" />
+              <Circle x={0} y={0} radius={4} stroke="rgba(0,196,255,0.9)" strokeWidth={1.5} fill="transparent" />
+            </Group>
+          )}
 
-          {/* Badge designer */}
+          {/* Badge designer — shape-based badge (priority) */}
           {hasBadgeDesigner && (() => {
             const scaledSize = Math.round(badgeSize * s)
             const bp = getCornerPos(badgePosition, width, height, scaledSize, scaledSize, pad)
@@ -266,6 +280,27 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
                     fill={badgeTextColor} lineHeight={1.2} wrap="word"
                   />
                 )}
+              </Group>
+            )
+          })()}
+
+          {/* Badge image — fallback */}
+          {!hasBadgeDesigner && badgeImage && (() => {
+            const bh = badgeImgSz * (badgeImage.height / badgeImage.width)
+            const bp = getCornerPos(badgePosition, width, height, badgeImgSz, bh, pad)
+            return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSz} height={bh} />
+          })()}
+
+          {/* Old badge text fallback */}
+          {!hasBadgeDesigner && !badgeImage && badge && (() => {
+            const bfz = Math.round(14 * s)
+            const bw = Math.max(badge.length * bfz * 0.65, 60)
+            const bh = bfz * 2.2
+            const bp = getCornerPos(badgePosition, width, height, bw, bh, pad)
+            return (
+              <Group x={bp.x} y={bp.y}>
+                <Rect width={bw} height={bh} fill={brandColor} />
+                <Text text={badge} width={bw} height={bh} align="center" verticalAlign="middle" fontSize={bfz} fontFamily={headlineFont} fontStyle="bold" fill="#FFFFFF" />
               </Group>
             )
           })()}

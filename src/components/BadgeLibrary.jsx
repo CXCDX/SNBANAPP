@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useEffect } from 'react'
 import { useAppState, useAppDispatch, DEFAULT_FONTS } from '../store/AppContext'
 
 const SHAPES = [
@@ -21,6 +21,90 @@ const ALIGN_OPTIONS = [
   { id: 'right', label: 'R' },
 ]
 
+function BadgePreview({ shape, bgColor, textColor, borderColor, borderWidth, fontFamily, fontSize, bold, italic, textAlign, line1, line2, line3, rotation }) {
+  const canvasRef = useRef(null)
+  const lines = [line1, line2, line3].filter(Boolean)
+  const text = lines.join('\n')
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const size = 120
+    canvas.width = size
+    canvas.height = size
+    ctx.clearRect(0, 0, size, size)
+
+    const half = size / 2
+    ctx.save()
+    ctx.translate(half, half)
+    ctx.rotate((rotation || 0) * Math.PI / 180)
+
+    // Draw shape
+    ctx.fillStyle = bgColor || '#FF3D57'
+    if (shape === 'circle') {
+      ctx.beginPath()
+      ctx.arc(0, 0, half - 4, 0, Math.PI * 2)
+      ctx.fill()
+      if (borderWidth > 0) { ctx.strokeStyle = borderColor; ctx.lineWidth = borderWidth; ctx.stroke() }
+    } else if (shape === 'rectangle') {
+      ctx.fillRect(-half + 4, -half + 4, size - 8, size - 8)
+      if (borderWidth > 0) { ctx.strokeStyle = borderColor; ctx.lineWidth = borderWidth; ctx.strokeRect(-half + 4, -half + 4, size - 8, size - 8) }
+    } else if (shape === 'pill') {
+      const pw = size - 8
+      const ph = (size - 8) * 0.55
+      const r = ph / 2
+      ctx.beginPath()
+      ctx.moveTo(-pw / 2 + r, -ph / 2)
+      ctx.lineTo(pw / 2 - r, -ph / 2)
+      ctx.arc(pw / 2 - r, 0, r, -Math.PI / 2, Math.PI / 2)
+      ctx.lineTo(-pw / 2 + r, ph / 2)
+      ctx.arc(-pw / 2 + r, 0, r, Math.PI / 2, -Math.PI / 2)
+      ctx.closePath()
+      ctx.fill()
+      if (borderWidth > 0) { ctx.strokeStyle = borderColor; ctx.lineWidth = borderWidth; ctx.stroke() }
+    } else if (shape === 'starburst') {
+      const outer = half - 4
+      const inner = outer * 0.7
+      const points = 12
+      ctx.beginPath()
+      for (let i = 0; i < points * 2; i++) {
+        const r2 = i % 2 === 0 ? outer : inner
+        const a = (Math.PI * i) / points - Math.PI / 2
+        ctx[i === 0 ? 'moveTo' : 'lineTo'](Math.cos(a) * r2, Math.sin(a) * r2)
+      }
+      ctx.closePath()
+      ctx.fill()
+      if (borderWidth > 0) { ctx.strokeStyle = borderColor; ctx.lineWidth = borderWidth; ctx.stroke() }
+    }
+
+    // Draw text
+    if (lines.length > 0) {
+      const fSize = Math.min(fontSize || 12, 16)
+      const style = `${bold ? 'bold' : ''} ${italic ? 'italic' : ''}`.trim() || 'normal'
+      ctx.font = `${style} ${fSize}px "${fontFamily || 'Barlow Condensed'}", sans-serif`
+      ctx.fillStyle = textColor || '#FFFFFF'
+      ctx.textAlign = textAlign || 'center'
+      ctx.textBaseline = 'middle'
+      const lineH = fSize * 1.3
+      const totalH = lines.length * lineH
+      const startY = -totalH / 2 + lineH / 2
+      lines.forEach((line, i) => {
+        const tx = textAlign === 'left' ? -half + 12 : textAlign === 'right' ? half - 12 : 0
+        ctx.fillText(line, tx, startY + i * lineH)
+      })
+    }
+
+    ctx.restore()
+  }, [shape, bgColor, textColor, borderColor, borderWidth, fontFamily, fontSize, bold, italic, textAlign, line1, line2, line3, rotation, lines, text])
+
+  return (
+    <div className="flex items-center justify-center" style={{ background: '#1E1E1E', padding: '8px', border: '1px solid #E0E0DC' }}>
+      <canvas ref={canvasRef} width={120} height={120} style={{ width: '120px', height: '120px' }} />
+    </div>
+  )
+}
+
 export default function BadgeLibrary() {
   const {
     badgeShape, badgeBgColor, badgeTextColor, badgeBorderColor, badgeBorderWidth,
@@ -39,6 +123,54 @@ export default function BadgeLibrary() {
 
   return (
     <div className="space-y-3">
+
+      {/* Live preview */}
+      <BadgePreview
+        shape={badgeShape} bgColor={badgeBgColor} textColor={badgeTextColor}
+        borderColor={badgeBorderColor} borderWidth={badgeBorderWidth}
+        fontFamily={badgeFontFamily} fontSize={badgeFontSize}
+        bold={badgeBold} italic={badgeItalic} textAlign={badgeTextAlign}
+        line1={badgeLine1} line2={badgeLine2} line3={badgeLine3}
+        rotation={badgeRotation}
+      />
+
+      {!hasBadgeText && (
+        <p className="text-[10px] font-mono text-secondary text-center" style={{ color: '#999994' }}>
+          Type text below to add badge to canvas
+        </p>
+      )}
+
+      {/* Text inputs (3 lines) — FIRST so users type immediately */}
+      <div className="space-y-1">
+        <p className="text-[11px] font-mono text-secondary">Badge Text</p>
+        <input
+          type="text"
+          value={badgeLine1}
+          onChange={e => dispatch({ type: 'SET_BADGE_LINE1', payload: e.target.value })}
+          placeholder="Line 1 (e.g. -20%)"
+          maxLength={20}
+          className="w-full text-[12px] font-mono text-ink bg-transparent px-2 py-1"
+          style={{ border: '1px solid #E0E0DC', outline: 'none' }}
+        />
+        <input
+          type="text"
+          value={badgeLine2}
+          onChange={e => dispatch({ type: 'SET_BADGE_LINE2', payload: e.target.value })}
+          placeholder="Line 2"
+          maxLength={20}
+          className="w-full text-[12px] font-mono text-ink bg-transparent px-2 py-1"
+          style={{ border: '1px solid #E0E0DC', outline: 'none' }}
+        />
+        <input
+          type="text"
+          value={badgeLine3}
+          onChange={e => dispatch({ type: 'SET_BADGE_LINE3', payload: e.target.value })}
+          placeholder="Line 3"
+          maxLength={20}
+          className="w-full text-[12px] font-mono text-ink bg-transparent px-2 py-1"
+          style={{ border: '1px solid #E0E0DC', outline: 'none' }}
+        />
+      </div>
 
       {/* Shape selector */}
       <div className="space-y-1">
@@ -177,38 +309,6 @@ export default function BadgeLibrary() {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Text inputs (3 lines) */}
-      <div className="space-y-1">
-        <p className="text-[11px] font-mono text-secondary">Text</p>
-        <input
-          type="text"
-          value={badgeLine1}
-          onChange={e => dispatch({ type: 'SET_BADGE_LINE1', payload: e.target.value })}
-          placeholder="Line 1"
-          maxLength={20}
-          className="w-full text-[12px] font-mono text-ink bg-transparent px-2 py-1"
-          style={{ border: '1px solid #E0E0DC', outline: 'none' }}
-        />
-        <input
-          type="text"
-          value={badgeLine2}
-          onChange={e => dispatch({ type: 'SET_BADGE_LINE2', payload: e.target.value })}
-          placeholder="Line 2"
-          maxLength={20}
-          className="w-full text-[12px] font-mono text-ink bg-transparent px-2 py-1"
-          style={{ border: '1px solid #E0E0DC', outline: 'none' }}
-        />
-        <input
-          type="text"
-          value={badgeLine3}
-          onChange={e => dispatch({ type: 'SET_BADGE_LINE3', payload: e.target.value })}
-          placeholder="Line 3"
-          maxLength={20}
-          className="w-full text-[12px] font-mono text-ink bg-transparent px-2 py-1"
-          style={{ border: '1px solid #E0E0DC', outline: 'none' }}
-        />
       </div>
 
       {/* Size */}

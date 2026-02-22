@@ -233,7 +233,7 @@ export default function CenterCanvas() {
           }}
         >
           <span className="text-[11px] font-mono text-secondary">
-            EDIT MODE — double-click text to edit, drag to reposition
+            EDIT MODE — double-click text to edit, drag to reposition, click background to set focus point
           </span>
           <div className="flex gap-2">
             <button

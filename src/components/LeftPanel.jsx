@@ -4,6 +4,7 @@ import LogoSelector from './LogoSelector'
 import BadgeLibrary from './BadgeLibrary'
 import FontManager from './FontManager'
 import CsvBulkUpload from './CsvBulkUpload'
+import FocusPointSelector from './FocusPointSelector'
 
 function CollapsibleSection({ title, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -71,6 +72,12 @@ export default function LeftPanel() {
               SHARKNINJA
             </p>
           </header>
+
+          <div className="h-px bg-border" />
+
+          <CollapsibleSection title="Focus Point" defaultOpen={false}>
+            <FocusPointSelector />
+          </CollapsibleSection>
 
           <div className="h-px bg-border" />
 

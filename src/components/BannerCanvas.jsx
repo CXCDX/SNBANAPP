@@ -190,16 +190,10 @@ export default function BannerCanvas({ format, scale = 1 }) {
           />
         )}
 
-        {/* Badge image from library — positioned */}
-        {badgeImage && !hasBadgeDesigner && (() => {
-          const bh = badgeImgSize * (badgeImage.height / badgeImage.width)
-          const bp = getCornerPos(badgePosition, width, height, badgeImgSize, bh, padding)
-          return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSize} height={bh} />
-        })()}
-
-        {/* Badge designer — shape-based badge */}
+        {/* Badge designer — shape-based badge (priority) */}
         {hasBadgeDesigner && (() => {
-          const bp = getCornerPos(badgePosition, width, height, badgeImgSize, badgeImgSize, padding)
+          const scaledBadge = Math.round((badgeSize || 60) * s)
+          const bp = getCornerPos(badgePosition, width, height, scaledBadge, scaledBadge, padding)
           return (
             <BadgeDesigner
               x={bp.x} y={bp.y}
@@ -211,6 +205,31 @@ export default function BannerCanvas({ format, scale = 1 }) {
               line1={badgeLine1} line2={badgeLine2} line3={badgeLine3}
               rotation={badgeRotation} scale={s}
             />
+          )
+        })()}
+
+        {/* Badge image from library — fallback when no designer badge */}
+        {!hasBadgeDesigner && badgeImage && (() => {
+          const bh = badgeImgSize * (badgeImage.height / badgeImage.width)
+          const bp = getCornerPos(badgePosition, width, height, badgeImgSize, bh, padding)
+          return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSize} height={bh} />
+        })()}
+
+        {/* Old badge text fallback — for backward compat */}
+        {!hasBadgeDesigner && !badgeImage && badge && (() => {
+          const badgeFontSz = Math.round(14 * s)
+          const bw = Math.max(badge.length * badgeFontSz * 0.65, 60)
+          const bh = badgeFontSz * 2.2
+          const bp = getCornerPos(badgePosition, width, height, bw, bh, padding)
+          return (
+            <Group x={bp.x} y={bp.y}>
+              <Rect width={bw} height={bh} fill={brandColor} />
+              <Text
+                text={badge} width={bw} height={bh}
+                align="center" verticalAlign="middle"
+                fontSize={badgeFontSz} fontFamily={headlineFont} fontStyle="bold" fill="#FFFFFF"
+              />
+            </Group>
           )
         })()}
 
