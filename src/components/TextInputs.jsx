@@ -1,6 +1,56 @@
-import { useAppState, useAppDispatch } from '../store/AppContext'
+import { useAppState, useAppDispatch, DEFAULT_FONTS } from '../store/AppContext'
 
-function CharInput({ label, value, onChange, maxLength, placeholder }) {
+function FontSelect({ field, value }) {
+  const { customFonts } = useAppState()
+  const dispatch = useAppDispatch()
+  const allFonts = [...DEFAULT_FONTS, ...customFonts.map(f => f.name)]
+
+  return (
+    <select
+      value={value}
+      onChange={(e) => dispatch({ type: 'SET_FIELD_FONT', payload: { field, font: e.target.value } })}
+      className="w-full bg-transparent border-none text-[10px] font-mono text-secondary cursor-pointer p-0 focus:outline-none"
+      style={{ borderBottom: '1px solid #E0E0DC', paddingBottom: '2px' }}
+      aria-label={`Font for ${field}`}
+    >
+      {allFonts.map((f) => (
+        <option key={f} value={f}>{f}</option>
+      ))}
+    </select>
+  )
+}
+
+function ColorPicker({ field, value, autoColor }) {
+  const dispatch = useAppDispatch()
+  const displayColor = value || autoColor || '#F5F5F5'
+  const isAuto = !value
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={displayColor}
+        onChange={(e) => dispatch({ type: 'SET_FIELD_COLOR', payload: { field, color: e.target.value } })}
+        className="w-5 h-5"
+        aria-label={`Color for ${field}`}
+      />
+      <span className="text-[9px] font-mono text-secondary">
+        {isAuto ? 'auto' : value}
+      </span>
+      {!isAuto && (
+        <button
+          onClick={() => dispatch({ type: 'SET_FIELD_COLOR', payload: { field, color: '' } })}
+          className="text-[9px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+          aria-label="Reset to auto color"
+        >
+          reset
+        </button>
+      )}
+    </div>
+  )
+}
+
+function CharInput({ label, field, value, onChange, maxLength, placeholder, font, color, autoColor }) {
   const atLimit = maxLength && value.length >= maxLength
   const counterColor = atLimit ? 'text-danger' : 'text-secondary'
 
@@ -25,12 +75,18 @@ function CharInput({ label, value, onChange, maxLength, placeholder }) {
         className="input-editorial"
         aria-label={label}
       />
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <FontSelect field={field} value={font} />
+        </div>
+        <ColorPicker field={field} value={color} autoColor={autoColor} />
+      </div>
     </div>
   )
 }
 
 export default function TextInputs() {
-  const { headline, tagline, subtext, ctaText, badge } = useAppState()
+  const state = useAppState()
   const dispatch = useAppDispatch()
 
   return (
@@ -40,35 +96,50 @@ export default function TextInputs() {
       </h3>
       <CharInput
         label="Headline"
-        value={headline}
+        field="headline"
+        value={state.headline}
         onChange={(v) => dispatch({ type: 'SET_HEADLINE', payload: v })}
         maxLength={30}
         placeholder="Main headline text"
+        font={state.headlineFont}
+        color={state.headlineColor}
       />
       <CharInput
         label="Tagline"
-        value={tagline}
+        field="tagline"
+        value={state.tagline}
         onChange={(v) => dispatch({ type: 'SET_TAGLINE', payload: v })}
         placeholder="3 Makine Bir Arada"
+        font={state.taglineFont}
+        color={state.taglineColor}
       />
       <CharInput
         label="Subtext"
-        value={subtext}
+        field="subtext"
+        value={state.subtext}
         onChange={(v) => dispatch({ type: 'SET_SUBTEXT', payload: v })}
         maxLength={90}
         placeholder="Supporting description"
+        font={state.subtextFont}
+        color={state.subtextColor}
       />
       <CharInput
         label="CTA Button"
-        value={ctaText}
+        field="cta"
+        value={state.ctaText}
         onChange={(v) => dispatch({ type: 'SET_CTA', payload: v })}
         placeholder="Shop Now"
+        font={state.ctaFont}
+        color={state.ctaColor}
       />
       <CharInput
         label="Badge"
-        value={badge}
+        field="badge"
+        value={state.badge}
         onChange={(v) => dispatch({ type: 'SET_BADGE', payload: v })}
         placeholder="-20% OFF"
+        font={state.headlineFont}
+        color=""
       />
     </div>
   )

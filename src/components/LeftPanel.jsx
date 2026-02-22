@@ -1,6 +1,8 @@
 import ImageUpload from './ImageUpload'
 import TextInputs from './TextInputs'
 import BrandSettings from './BrandSettings'
+import BadgeLibrary from './BadgeLibrary'
+import FontManager from './FontManager'
 
 export default function LeftPanel() {
   return (
@@ -27,7 +29,15 @@ export default function LeftPanel() {
 
           <div className="h-px bg-ink" />
 
+          <FontManager />
+
+          <div className="h-px bg-ink" />
+
           <TextInputs />
+
+          <div className="h-px bg-ink" />
+
+          <BadgeLibrary />
 
           <div className="h-px bg-ink" />
 

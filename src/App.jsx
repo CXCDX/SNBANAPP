@@ -8,6 +8,8 @@ import MobileTabBar from './components/MobileTabBar'
 import ImageUpload from './components/ImageUpload'
 import TextInputs from './components/TextInputs'
 import BrandSettings from './components/BrandSettings'
+import BadgeLibrary from './components/BadgeLibrary'
+import FontManager from './components/FontManager'
 import ExportPanel from './components/ExportPanel'
 
 function MobileView() {
@@ -28,7 +30,11 @@ function MobileView() {
           <div className="h-px bg-ink" />
           <ImageUpload />
           <div className="h-px bg-ink" />
+          <FontManager />
+          <div className="h-px bg-ink" />
           <TextInputs />
+          <div className="h-px bg-ink" />
+          <BadgeLibrary />
           <div className="h-px bg-ink" />
           <BrandSettings />
         </div>

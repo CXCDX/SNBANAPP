@@ -36,13 +36,20 @@ export default function ExportPanel() {
 
       let bgImg = null
       let logoImg = null
+      let badgeImg = null
 
       if (state.image) bgImg = await loadImage(state.image.src)
       if (state.logo) logoImg = await loadImage(state.logo)
+      if (state.activeBadgeSrc) badgeImg = await loadImage(state.activeBadgeSrc)
 
       const textTheme = state.image ? getTextTheme(state.image.luminance) : 'light'
-      const textColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
+      const autoColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
       const overlayGradient = getOverlayGradient(textTheme)
+
+      const hFont = fontStr(state.headlineFont)
+      const tFont = fontStr(state.taglineFont)
+      const sFont = fontStr(state.subtextFont)
+      const cFont = fontStr(state.ctaFont)
 
       for (const format of formats) {
         const canvas = document.createElement('canvas')
@@ -64,14 +71,15 @@ export default function ExportPanel() {
           ctx.fillRect(0, format.height * 0.3, format.width, format.height * 0.7)
         }
 
-        const baseFontScale = Math.min(format.width, format.height) / 1080
-        const padding = Math.round(40 * baseFontScale)
-        const headlineSize = Math.round(48 * baseFontScale)
-        const taglineSize = Math.round(28 * baseFontScale)
-        const subtextSize = Math.round(20 * baseFontScale)
-        const ctaFontSize = Math.round(18 * baseFontScale)
-        const badgeSize = Math.round(14 * baseFontScale)
-        const logoHeight = Math.round(40 * baseFontScale)
+        const sc = Math.min(format.width, format.height) / 1080
+        const padding = Math.round(40 * sc)
+        const headlineSize = Math.round(48 * sc)
+        const taglineSize = Math.round(28 * sc)
+        const subtextSize = Math.round(20 * sc)
+        const ctaFontSize = Math.round(18 * sc)
+        const badgeFontSize = Math.round(14 * sc)
+        const logoHeight = Math.round(40 * sc)
+        const badgeImgSize = Math.round(60 * sc)
         const textAreaY = format.height * 0.50
 
         if (logoImg) {
@@ -79,14 +87,18 @@ export default function ExportPanel() {
           ctx.drawImage(logoImg, padding, padding, lw, logoHeight)
         }
 
-        if (state.badge) {
-          const bw = Math.max(state.badge.length * badgeSize * 0.65, 60)
-          const bh = badgeSize * 2.2
+        // Badge image or text
+        if (badgeImg) {
+          const bh = badgeImgSize * (badgeImg.height / badgeImg.width)
+          ctx.drawImage(badgeImg, format.width - padding - badgeImgSize, padding, badgeImgSize, bh)
+        } else if (state.badge) {
+          const bw = Math.max(state.badge.length * badgeFontSize * 0.65, 60)
+          const bh = badgeFontSize * 2.2
           const bx = format.width - padding - bw
           ctx.fillStyle = state.brandColor
           ctx.fillRect(bx, padding, bw, bh)
           ctx.fillStyle = '#FFFFFF'
-          ctx.font = `bold ${badgeSize}px "Playfair Display", Georgia, serif`
+          ctx.font = `bold ${badgeFontSize}px ${hFont}`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
           ctx.fillText(state.badge, bx + bw / 2, padding + bh / 2)
@@ -95,18 +107,19 @@ export default function ExportPanel() {
         let yOff = textAreaY
 
         if (state.headline) {
-          ctx.fillStyle = textColor
-          ctx.font = `bold ${headlineSize}px "Playfair Display", Georgia, serif`
+          ctx.fillStyle = state.headlineColor || autoColor
+          ctx.font = `bold ${headlineSize}px ${hFont}`
           ctx.textAlign = 'left'
           ctx.textBaseline = 'top'
+          ctx.globalAlpha = 1
           yOff = wrapText(ctx, state.headline.toUpperCase(), padding, yOff, format.width - padding * 2, headlineSize * 1.1)
           yOff += 6
         }
 
         if (state.tagline) {
-          ctx.fillStyle = textColor
-          ctx.globalAlpha = 0.9
-          ctx.font = `italic ${taglineSize}px "Playfair Display", Georgia, serif`
+          ctx.fillStyle = state.taglineColor || autoColor
+          ctx.globalAlpha = state.taglineColor ? 1 : 0.9
+          ctx.font = `italic ${taglineSize}px ${tFont}`
           ctx.textAlign = 'left'
           ctx.textBaseline = 'top'
           yOff = wrapText(ctx, state.tagline, padding, yOff, format.width - padding * 2, taglineSize * 1.3)
@@ -115,9 +128,9 @@ export default function ExportPanel() {
         }
 
         if (state.subtext) {
-          ctx.fillStyle = textColor
-          ctx.globalAlpha = 0.8
-          ctx.font = `${subtextSize}px "DM Mono", monospace`
+          ctx.fillStyle = state.subtextColor || autoColor
+          ctx.globalAlpha = state.subtextColor ? 1 : 0.8
+          ctx.font = `${subtextSize}px ${sFont}`
           ctx.textAlign = 'left'
           ctx.textBaseline = 'top'
           wrapText(ctx, state.subtext, padding, yOff, format.width - padding * 2, subtextSize * 1.6)
@@ -128,10 +141,10 @@ export default function ExportPanel() {
           const ctaW = Math.max(state.ctaText.length * ctaFontSize * 0.65, 100)
           const ctaH = ctaFontSize * 2.5
           const ctaY = format.height - padding - ctaH
-          ctx.fillStyle = '#0A0A0A'
+          ctx.fillStyle = state.ctaColor || '#0A0A0A'
           ctx.fillRect(padding, ctaY, ctaW, ctaH)
           ctx.fillStyle = '#FFFFFF'
-          ctx.font = `500 ${ctaFontSize}px "DM Mono", monospace`
+          ctx.font = `500 ${ctaFontSize}px ${cFont}`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
           ctx.fillText(state.ctaText.toUpperCase(), padding + ctaW / 2, ctaY + ctaH / 2)
@@ -183,7 +196,6 @@ export default function ExportPanel() {
         </button>
       </div>
 
-      {/* The ONLY heavy element */}
       <button
         onClick={handleExport}
         disabled={state.isExporting || enabledFormats.length === 0}
@@ -211,7 +223,10 @@ function loadImage(src) {
   })
 }
 
-// Returns the Y position after the last line
+function fontStr(name) {
+  return `"${name}", sans-serif`
+}
+
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   const words = text.split(' ')
   let line = ''
