@@ -1,17 +1,24 @@
-import { useState, useRef, useCallback } from 'react'
-import { Stage, Layer, Rect, Text, Image as KonvaImage, Group } from 'react-konva'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { useAppState, useAppDispatch } from '../store/AppContext'
 import { AD_FORMATS, getPlatformFolder } from '../utils/formats'
 import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
+import { runDesignChecks } from '../utils/designPolice'
 import FormatChecklist from './FormatChecklist'
+
+const QUALITY_OPTIONS = [
+  { value: 0.6, label: '60%' },
+  { value: 0.8, label: '80%' },
+  { value: 1.0, label: '100%' },
+]
 
 export default function ExportPanel() {
   const state = useAppState()
   const dispatch = useAppDispatch()
   const [enabledFormats, setEnabledFormats] = useState(AD_FORMATS.map(f => f.id))
+  const exportFnRef = useRef(null)
 
   const toggleFormat = (id) => {
     setEnabledFormats(prev =>
@@ -22,194 +29,171 @@ export default function ExportPanel() {
   const selectAll = () => setEnabledFormats(AD_FORMATS.map(f => f.id))
   const selectNone = () => setEnabledFormats([])
 
-  const handleExport = useCallback(async () => {
+  const doExport = useCallback(async () => {
     if (enabledFormats.length === 0) {
-      dispatch({ type: 'ADD_TOAST', payload: { message: 'Select at least one format to export', variant: 'error' } })
+      dispatch({ type: 'ADD_TOAST', payload: { message: 'Select at least one format', variant: 'error' } })
       return
     }
 
     dispatch({ type: 'SET_EXPORTING', payload: true })
-    dispatch({ type: 'ADD_TOAST', payload: { message: 'Generating banners...', variant: 'info' } })
+    dispatch({ type: 'ADD_TOAST', payload: { message: 'Generating...', variant: 'info' } })
 
     try {
-      const zip = new JSZip()
       const formats = AD_FORMATS.filter(f => enabledFormats.includes(f.id))
 
-      // Load images once
       let bgImg = null
       let logoImg = null
+      let badgeImg = null
 
-      if (state.image) {
-        bgImg = await loadImage(state.image.src)
-      }
-      if (state.logo) {
-        logoImg = await loadImage(state.logo)
-      }
+      if (state.image) bgImg = await loadImage(state.image.src)
+      if (state.logo) logoImg = await loadImage(state.logo)
+      if (state.activeBadgeSrc) badgeImg = await loadImage(state.activeBadgeSrc)
 
       const textTheme = state.image ? getTextTheme(state.image.luminance) : 'light'
-      const textColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
+      const autoColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
       const overlayGradient = getOverlayGradient(textTheme)
 
-      for (const format of formats) {
-        const canvas = document.createElement('canvas')
-        canvas.width = format.width
-        canvas.height = format.height
-        const ctx = canvas.getContext('2d')
+      const hFont = fontStr(state.headlineFont)
+      const tFont = fontStr(state.taglineFont)
+      const sFont = fontStr(state.subtextFont)
+      const cFont = fontStr(state.ctaFont)
 
-        // Background
-        ctx.fillStyle = '#1E1E1E'
-        ctx.fillRect(0, 0, format.width, format.height)
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      const mimeType = state.exportQuality < 1 ? 'image/jpeg' : 'image/png'
+      const ext = state.exportQuality < 1 ? 'jpg' : 'png'
 
-        // Background image with smart crop
-        if (bgImg) {
-          const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height)
-          ctx.drawImage(bgImg, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, format.width, format.height)
-
-          // Gradient overlay
-          const gradient = ctx.createLinearGradient(0, format.height * 0.3, 0, format.height)
-          gradient.addColorStop(0, overlayGradient.to)
-          gradient.addColorStop(1, overlayGradient.from)
-          ctx.fillStyle = gradient
-          ctx.fillRect(0, format.height * 0.3, format.width, format.height * 0.7)
+      // Single format → direct download
+      if (formats.length === 1) {
+        const format = formats[0]
+        const canvas = renderCanvas({
+          format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+        })
+        const blob = await new Promise(resolve =>
+          canvas.toBlob(resolve, mimeType, state.exportQuality)
+        )
+        const fileName = `SharkNinja_${format.name.replace(/[/\s]+/g, '_')}_${dateStr}.${ext}`
+        saveAs(blob, fileName)
+        dispatch({ type: 'ADD_TOAST', payload: { message: `${format.name} exported`, variant: 'success' } })
+      } else {
+        // Multiple → ZIP
+        const zip = new JSZip()
+        for (const format of formats) {
+          const canvas = renderCanvas({
+            format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+          })
+          const blob = await new Promise(resolve =>
+            canvas.toBlob(resolve, mimeType, state.exportQuality)
+          )
+          const folder = getPlatformFolder(format.platform)
+          const fileName = `SharkNinja_${format.name.replace(/[/\s]+/g, '_')}_v1_${dateStr}.${ext}`
+          zip.file(`${folder}/${fileName}`, blob)
         }
 
-        const baseFontScale = Math.min(format.width, format.height) / 1080
-        const padding = Math.round(40 * baseFontScale)
-        const headlineSize = Math.round(48 * baseFontScale)
-        const subtextSize = Math.round(20 * baseFontScale)
-        const ctaFontSize = Math.round(18 * baseFontScale)
-        const badgeSize = Math.round(14 * baseFontScale)
-        const logoHeight = Math.round(40 * baseFontScale)
-        const textAreaY = format.height * 0.55
-
-        // Logo
-        if (logoImg) {
-          const lw = logoHeight * (logoImg.width / logoImg.height)
-          ctx.drawImage(logoImg, padding, padding, lw, logoHeight)
-        }
-
-        // Badge
-        if (state.badge) {
-          const bw = Math.max(state.badge.length * badgeSize * 0.65, 60)
-          const bh = badgeSize * 2.2
-          const bx = format.width - padding - bw
-          ctx.fillStyle = state.brandColor
-          roundRect(ctx, bx, padding, bw, bh, 4)
-          ctx.fill()
-          ctx.fillStyle = '#FFFFFF'
-          ctx.font = `bold ${badgeSize}px "Barlow Condensed", sans-serif`
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(state.badge, bx + bw / 2, padding + bh / 2)
-        }
-
-        // Headline
-        if (state.headline) {
-          ctx.fillStyle = textColor
-          ctx.font = `bold ${headlineSize}px "Barlow Condensed", sans-serif`
-          ctx.textAlign = 'left'
-          ctx.textBaseline = 'top'
-          wrapText(ctx, state.headline.toUpperCase(), padding, textAreaY, format.width - padding * 2, headlineSize * 1.1)
-        }
-
-        // Subtext
-        if (state.subtext) {
-          ctx.fillStyle = textColor
-          ctx.globalAlpha = 0.85
-          ctx.font = `${subtextSize}px "DM Sans", sans-serif`
-          ctx.textAlign = 'left'
-          ctx.textBaseline = 'top'
-          wrapText(ctx, state.subtext, padding, textAreaY + headlineSize * 1.3 + 8, format.width - padding * 2, subtextSize * 1.4)
-          ctx.globalAlpha = 1
-        }
-
-        // CTA button
-        if (state.ctaText) {
-          const ctaW = Math.max(state.ctaText.length * ctaFontSize * 0.65, 100)
-          const ctaH = ctaFontSize * 2.5
-          const ctaY = format.height - padding - ctaH
-          ctx.fillStyle = '#FF6B35'
-          roundRect(ctx, padding, ctaY, ctaW, ctaH, 6)
-          ctx.fill()
-          ctx.fillStyle = '#FFFFFF'
-          ctx.font = `bold ${ctaFontSize}px "DM Sans", sans-serif`
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(state.ctaText.toUpperCase(), padding + ctaW / 2, ctaY + ctaH / 2)
-        }
-
-        // Bottom accent strip
-        ctx.fillStyle = state.brandColor
-        ctx.fillRect(0, format.height - 4, format.width, 4)
-
-        // Export to blob
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
-        const folder = getPlatformFolder(format.platform)
-        zip.file(`${folder}/${format.name.replace(/[/\s]+/g, '_')}_${format.width}x${format.height}.png`, blob)
+        const content = await zip.generateAsync({ type: 'blob' })
+        saveAs(content, `banners_${dateStr}.zip`)
+        dispatch({ type: 'ADD_TOAST', payload: { message: `${formats.length} banners exported`, variant: 'success' } })
       }
-
-      const content = await zip.generateAsync({ type: 'blob' })
-      saveAs(content, `banners_${Date.now()}.zip`)
-      dispatch({ type: 'ADD_TOAST', payload: { message: `Exported ${formats.length} banners!`, variant: 'success' } })
     } catch (err) {
       console.error('Export failed:', err)
-      dispatch({ type: 'ADD_TOAST', payload: { message: 'Export failed. Check console.', variant: 'error' } })
+      dispatch({ type: 'ADD_TOAST', payload: { message: 'Export failed', variant: 'error' } })
     } finally {
       dispatch({ type: 'SET_EXPORTING', payload: false })
     }
   }, [enabledFormats, state, dispatch])
 
-  return (
-    <div className="space-y-4">
-      <FormatChecklist enabledFormats={enabledFormats} onToggle={toggleFormat} />
+  // Store export fn for design police "Export Anyway"
+  exportFnRef.current = doExport
 
-      <div className="flex gap-2">
+  // Listen for "export anyway" event from DesignPoliceModal
+  useEffect(() => {
+    const handler = () => exportFnRef.current?.()
+    window.addEventListener('banner-export-anyway', handler)
+    return () => window.removeEventListener('banner-export-anyway', handler)
+  }, [])
+
+  const handleExport = useCallback(() => {
+    if (enabledFormats.length === 0) {
+      dispatch({ type: 'ADD_TOAST', payload: { message: 'Select at least one format', variant: 'error' } })
+      return
+    }
+    // Open export modal
+    dispatch({ type: 'SET_SHOW_EXPORT_MODAL', payload: true })
+  }, [enabledFormats, dispatch])
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink mb-3">
+          Formats
+        </h3>
+        <FormatChecklist enabledFormats={enabledFormats} onToggle={toggleFormat} />
+      </div>
+
+      <div className="flex gap-2 text-[11px] font-mono">
         <button
           onClick={selectAll}
-          className="text-xs text-accent hover:underline"
+          className="text-ink hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Select all formats"
         >
           All
         </button>
-        <span className="text-xs text-text-secondary">/</span>
+        <span className="text-secondary">/</span>
         <button
           onClick={selectNone}
-          className="text-xs text-text-secondary hover:underline"
+          className="text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Deselect all formats"
         >
           None
         </button>
       </div>
 
+      {/* Quality selector */}
+      <div className="space-y-1">
+        <p className="text-[11px] font-mono text-secondary">Quality</p>
+        <div className="flex gap-1">
+          {QUALITY_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => dispatch({ type: 'SET_EXPORT_QUALITY', payload: opt.value })}
+              className="text-[11px] font-mono px-2 py-1 cursor-pointer transition-all"
+              style={{
+                background: state.exportQuality === opt.value ? '#0A0A0A' : 'transparent',
+                color: state.exportQuality === opt.value ? '#FAFAF8' : '#999994',
+                border: '1px solid ' + (state.exportQuality === opt.value ? '#0A0A0A' : '#E0E0DC'),
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <button
         onClick={handleExport}
         disabled={state.isExporting || enabledFormats.length === 0}
-        className="w-full py-2.5 px-4 rounded-lg font-heading font-semibold text-sm uppercase tracking-wider
-          bg-cta text-white
-          hover:brightness-110 hover:-translate-y-0.5
-          active:translate-y-0
-          disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0
-          transition-all duration-200
-          shadow-[0_4px_12px_rgba(255,107,53,0.3)]"
-        aria-label={state.isExporting ? 'Exporting banners...' : `Export ${enabledFormats.length} banner formats as ZIP`}
+        className="w-full py-2.5 px-3 text-[11px] font-mono uppercase tracking-[0.15em]
+          bg-ink text-bg
+          hover:bg-bg hover:text-ink
+          disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-ink disabled:hover:text-bg
+          transition-all duration-200 cursor-pointer"
+        style={{ border: '1px solid #0A0A0A' }}
+        aria-label={state.isExporting ? 'Exporting...' : `Export ${enabledFormats.length} formats`}
       >
-        {state.isExporting ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            Exporting...
-          </span>
-        ) : (
-          `Export ${enabledFormats.length} Formats as ZIP`
-        )}
+        {state.isExporting
+          ? 'Exporting...'
+          : enabledFormats.length === 1
+            ? 'Download PNG'
+            : `Generate ${enabledFormats.length} Formats`}
       </button>
     </div>
   )
 }
 
-// Helper: load image from src
+// Shared export function reference for design police
+export function getExportFn() {
+  return null
+}
+
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new window.Image()
@@ -220,22 +204,130 @@ function loadImage(src) {
   })
 }
 
-// Helper: rounded rect
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  ctx.lineTo(x + r, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.closePath()
+function fontStr(name) {
+  return `"${name}", sans-serif`
 }
 
-// Helper: wrap text
+function getCornerPos(position, canvasW, canvasH, elemW, elemH, padding) {
+  switch (position) {
+    case 'top-left':     return { x: padding, y: padding }
+    case 'top-right':    return { x: canvasW - padding - elemW, y: padding }
+    case 'bottom-left':  return { x: padding, y: canvasH - padding - elemH }
+    case 'bottom-right': return { x: canvasW - padding - elemW, y: canvasH - padding - elemH }
+    default:             return { x: padding, y: padding }
+  }
+}
+
+function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont }) {
+  const canvas = document.createElement('canvas')
+  canvas.width = format.width
+  canvas.height = format.height
+  const ctx = canvas.getContext('2d')
+
+  ctx.fillStyle = '#1E1E1E'
+  ctx.fillRect(0, 0, format.width, format.height)
+
+  if (bgImg) {
+    const formatKey = `${format.width}x${format.height}`
+    const focusPoint = state.focusPoints?.[formatKey] || { x: 0.5, y: 0.5 }
+    const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height, focusPoint)
+    ctx.drawImage(bgImg, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, format.width, format.height)
+    const gradient = ctx.createLinearGradient(0, format.height * 0.3, 0, format.height)
+    gradient.addColorStop(0, overlayGradient.to)
+    gradient.addColorStop(1, overlayGradient.from)
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, format.height * 0.3, format.width, format.height * 0.7)
+  }
+
+  const sc = Math.min(format.width, format.height) / 1080
+  const padding = Math.round(40 * sc)
+  const headlineSize = Math.round((state.headlineSize || 48) * sc)
+  const taglineSize = Math.round((state.taglineSize || 28) * sc)
+  const subtextSize = Math.round((state.subtextSize || 20) * sc)
+  const ctaFontSize = Math.round((state.ctaSize || 18) * sc)
+  const badgeFontSize = Math.round(14 * sc)
+  const logoHeight = Math.round((state.logoSize || 40) * sc)
+  const badgeImgSize = Math.round((state.badgeSize || 60) * sc)
+  const textAreaY = format.height * 0.50
+
+  // Logo — positioned
+  if (logoImg) {
+    const lw = logoHeight * (logoImg.width / logoImg.height)
+    const lp = getCornerPos(state.logoPosition, format.width, format.height, lw, logoHeight, padding)
+    ctx.drawImage(logoImg, lp.x, lp.y, lw, logoHeight)
+  }
+
+  // Badge — positioned
+  const bpos = state.badgePosition || 'top-right'
+  if (badgeImg) {
+    const bh = badgeImgSize * (badgeImg.height / badgeImg.width)
+    const bp = getCornerPos(bpos, format.width, format.height, badgeImgSize, bh, padding)
+    ctx.drawImage(badgeImg, bp.x, bp.y, badgeImgSize, bh)
+  } else if (state.badge) {
+    const bw = Math.max(state.badge.length * badgeFontSize * 0.65, 60)
+    const bh = badgeFontSize * 2.2
+    const bp = getCornerPos(bpos, format.width, format.height, bw, bh, padding)
+    ctx.fillStyle = state.brandColor
+    ctx.fillRect(bp.x, bp.y, bw, bh)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = `bold ${badgeFontSize}px ${hFont}`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(state.badge, bp.x + bw / 2, bp.y + bh / 2)
+  }
+
+  let yOff = textAreaY
+
+  if (state.headline) {
+    ctx.fillStyle = state.headlineColor || autoColor
+    ctx.font = `bold ${headlineSize}px ${hFont}`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    ctx.globalAlpha = 1
+    yOff = wrapText(ctx, state.headline.toUpperCase(), padding, yOff, format.width - padding * 2, headlineSize * 1.1)
+    yOff += 6
+  }
+
+  if (state.tagline) {
+    ctx.fillStyle = state.taglineColor || autoColor
+    ctx.globalAlpha = state.taglineColor ? 1 : 0.9
+    ctx.font = `italic ${taglineSize}px ${tFont}`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    yOff = wrapText(ctx, state.tagline, padding, yOff, format.width - padding * 2, taglineSize * 1.3)
+    yOff += 4
+    ctx.globalAlpha = 1
+  }
+
+  if (state.subtext) {
+    ctx.fillStyle = state.subtextColor || autoColor
+    ctx.globalAlpha = state.subtextColor ? 1 : 0.8
+    ctx.font = `${subtextSize}px ${sFont}`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    wrapText(ctx, state.subtext, padding, yOff, format.width - padding * 2, subtextSize * 1.6)
+    ctx.globalAlpha = 1
+  }
+
+  if (state.ctaText) {
+    const ctaW = Math.max(state.ctaText.length * ctaFontSize * 0.65, 100)
+    const ctaH = ctaFontSize * 2.5
+    const ctaY = format.height - padding - ctaH
+    ctx.fillStyle = state.ctaColor || '#0A0A0A'
+    ctx.fillRect(padding, ctaY, ctaW, ctaH)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = `500 ${ctaFontSize}px ${cFont}`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(state.ctaText.toUpperCase(), padding + ctaW / 2, ctaY + ctaH / 2)
+  }
+
+  ctx.fillStyle = state.brandColor
+  ctx.fillRect(0, format.height - 3, format.width, 3)
+
+  return canvas
+}
+
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   const words = text.split(' ')
   let line = ''
@@ -253,4 +345,5 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
     }
   }
   ctx.fillText(line.trim(), x, offsetY)
+  return offsetY + lineHeight
 }

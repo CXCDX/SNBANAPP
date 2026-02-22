@@ -4,21 +4,38 @@ import { useAppState } from '../store/AppContext'
 import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
 
-/**
- * Render a single banner format on a Konva stage.
- * Used both for preview and for export.
- */
-export default function BannerCanvas({ format, scale = 1, interactive = false }) {
-  const { image, headline, subtext, ctaText, badge, logo, brandColor } = useAppState()
+function getCornerPos(position, canvasW, canvasH, elemW, elemH, padding) {
+  switch (position) {
+    case 'top-left':     return { x: padding, y: padding }
+    case 'top-right':    return { x: canvasW - padding - elemW, y: padding }
+    case 'bottom-left':  return { x: padding, y: canvasH - padding - elemH }
+    case 'bottom-right': return { x: canvasW - padding - elemW, y: canvasH - padding - elemH }
+    default:             return { x: padding, y: padding }
+  }
+}
+
+export default function BannerCanvas({ format, scale = 1 }) {
+  const {
+    image, headline, tagline, subtext, ctaText, badge, logo, brandColor,
+    headlineFont, headlineColor, headlineSize,
+    taglineFont, taglineColor, taglineSize,
+    subtextFont, subtextColor, subtextSize,
+    ctaFont, ctaColor, ctaSize,
+    activeBadgeSrc, focusPoints,
+    logoPosition, logoSize, badgePosition, badgeSize,
+  } = useAppState()
+
+  const formatKey = `${format.width}x${format.height}`
+  const focusPoint = focusPoints[formatKey] || { x: 0.5, y: 0.5 }
   const stageRef = useRef(null)
   const [bgImage, setBgImage] = useState(null)
   const [logoImage, setLogoImage] = useState(null)
+  const [badgeImage, setBadgeImage] = useState(null)
 
   const { width, height } = format
   const displayWidth = width * scale
   const displayHeight = height * scale
 
-  // Load background image
   useEffect(() => {
     if (!image) { setBgImage(null); return }
     const img = new window.Image()
@@ -27,7 +44,6 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
     img.src = image.src
   }, [image])
 
-  // Load logo
   useEffect(() => {
     if (!logo) { setLogoImage(null); return }
     const img = new window.Image()
@@ -36,32 +52,41 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
     img.src = logo
   }, [logo])
 
-  // Compute text theme based on luminance
+  useEffect(() => {
+    if (!activeBadgeSrc) { setBadgeImage(null); return }
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => setBadgeImage(img)
+    img.src = activeBadgeSrc
+  }, [activeBadgeSrc])
+
   const textTheme = useMemo(() => {
     if (!image) return 'light'
     return getTextTheme(image.luminance)
   }, [image])
 
-  const textColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
+  const autoTextColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
   const overlayGradient = useMemo(() => getOverlayGradient(textTheme), [textTheme])
 
-  // Smart crop
   const crop = useMemo(() => {
     if (!bgImage) return null
-    return getCenterCrop(bgImage.width, bgImage.height, width, height)
-  }, [bgImage, width, height])
+    return getCenterCrop(bgImage.width, bgImage.height, width, height, focusPoint)
+  }, [bgImage, width, height, focusPoint])
 
-  // Responsive font sizes based on format
-  const baseFontScale = Math.min(width, height) / 1080
-  const headlineSize = Math.round(48 * baseFontScale)
-  const subtextSize = Math.round(20 * baseFontScale)
-  const ctaFontSize = Math.round(18 * baseFontScale)
-  const badgeSize = Math.round(14 * baseFontScale)
-  const logoHeight = Math.round(40 * baseFontScale)
-  const padding = Math.round(40 * baseFontScale)
+  const s = Math.min(width, height) / 1080
+  const hSize = Math.round((headlineSize || 48) * s)
+  const tSize = Math.round((taglineSize || 28) * s)
+  const sSize = Math.round((subtextSize || 20) * s)
+  const cSize = Math.round((ctaSize || 18) * s)
+  const badgeFontSize = Math.round(14 * s)
+  const logoH = Math.round((logoSize || 40) * s)
+  const padding = Math.round(40 * s)
+  const badgeImgSize = Math.round((badgeSize || 60) * s)
+  const textAreaY = height * 0.50
 
-  // Layout: text area at the bottom
-  const textAreaY = height * 0.55
+  const headlineEndY = headline ? textAreaY + hSize * 1.2 + 6 : textAreaY
+  const taglineEndY = tagline ? headlineEndY + tSize * 1.3 + 4 : headlineEndY
+  const subtextStartY = taglineEndY + 4
 
   return (
     <Stage
@@ -70,144 +95,143 @@ export default function BannerCanvas({ format, scale = 1, interactive = false })
       height={displayHeight}
       scaleX={scale}
       scaleY={scale}
-      style={{ background: '#0A0A0A' }}
       aria-label={`Banner preview for ${format.name}`}
     >
       <Layer>
-        {/* Background */}
         <Rect width={width} height={height} fill="#1E1E1E" />
 
-        {/* Background image with smart crop */}
+        {/* Empty state */}
+        {!bgImage && !headline && !tagline && !subtext && !ctaText && (
+          <>
+            <Text
+              text="Drop your image to begin"
+              x={0} y={height * 0.42} width={width}
+              align="center"
+              fontSize={Math.round(24 * s)}
+              fontFamily="Playfair Display"
+              fontStyle="italic"
+              fill="#555555"
+            />
+            <Text
+              text={`${width} × ${height}`}
+              x={0} y={height * 0.42 + Math.round(36 * s)} width={width}
+              align="center"
+              fontSize={Math.round(12 * s)}
+              fontFamily="DM Mono"
+              fill="#555555"
+              opacity={0.5}
+            />
+          </>
+        )}
+
         {bgImage && crop && (
           <KonvaImage
             image={bgImage}
-            x={0}
-            y={0}
-            width={width}
-            height={height}
+            x={0} y={0} width={width} height={height}
             crop={{ x: crop.sx, y: crop.sy, width: crop.sWidth, height: crop.sHeight }}
           />
         )}
 
-        {/* Gradient overlay for text readability */}
         {bgImage && (
           <Rect
-            x={0}
-            y={height * 0.3}
-            width={width}
-            height={height * 0.7}
+            x={0} y={height * 0.3} width={width} height={height * 0.7}
             fillLinearGradientStartPoint={{ x: 0, y: 0 }}
             fillLinearGradientEndPoint={{ x: 0, y: height * 0.7 }}
             fillLinearGradientColorStops={[0, overlayGradient.to, 1, overlayGradient.from]}
           />
         )}
 
-        {/* Badge */}
-        {badge && (
-          <Group x={width - padding - Math.max(badge.length * badgeSize * 0.65, 60)} y={padding}>
-            <Rect
-              width={Math.max(badge.length * badgeSize * 0.65, 60)}
-              height={badgeSize * 2.2}
-              fill={brandColor}
-              cornerRadius={4}
-            />
-            <Text
-              text={badge}
-              width={Math.max(badge.length * badgeSize * 0.65, 60)}
-              height={badgeSize * 2.2}
-              align="center"
-              verticalAlign="middle"
-              fontSize={badgeSize}
-              fontFamily="Barlow Condensed"
-              fontStyle="bold"
-              fill="#FFFFFF"
-            />
-          </Group>
-        )}
+        {/* Badge image from library — positioned */}
+        {badgeImage && (() => {
+          const bh = badgeImgSize * (badgeImage.height / badgeImage.width)
+          const bp = getCornerPos(badgePosition, width, height, badgeImgSize, bh, padding)
+          return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSize} height={bh} />
+        })()}
 
-        {/* Logo */}
-        {logoImage && (
-          <KonvaImage
-            image={logoImage}
-            x={padding}
-            y={padding}
-            height={logoHeight}
-            width={logoHeight * (logoImage.width / logoImage.height)}
-          />
-        )}
+        {/* Badge text fallback — positioned */}
+        {badge && !badgeImage && (() => {
+          const bw = Math.max(badge.length * badgeFontSize * 0.65, 60)
+          const bh = badgeFontSize * 2.2
+          const bp = getCornerPos(badgePosition, width, height, bw, bh, padding)
+          return (
+            <Group x={bp.x} y={bp.y}>
+              <Rect width={bw} height={bh} fill={brandColor} />
+              <Text
+                text={badge} width={bw} height={bh}
+                align="center" verticalAlign="middle"
+                fontSize={badgeFontSize} fontFamily={headlineFont} fontStyle="bold" fill="#FFFFFF"
+              />
+            </Group>
+          )
+        })()}
 
-        {/* Headline */}
+        {/* Logo — positioned */}
+        {logoImage && (() => {
+          const lw = logoH * (logoImage.width / logoImage.height)
+          const lp = getCornerPos(logoPosition, width, height, lw, logoH, padding)
+          return <KonvaImage image={logoImage} x={lp.x} y={lp.y} height={logoH} width={lw} />
+        })()}
+
         {headline && (
           <Text
             text={headline.toUpperCase()}
-            x={padding}
-            y={textAreaY}
-            width={width - padding * 2}
-            fontSize={headlineSize}
-            fontFamily="Barlow Condensed"
+            x={padding} y={textAreaY} width={width - padding * 2}
+            fontSize={hSize}
+            fontFamily={headlineFont}
             fontStyle="bold"
-            fill={textColor}
-            lineHeight={1.1}
-            wrap="word"
+            fill={headlineColor || autoTextColor}
+            lineHeight={1.1} letterSpacing={2} wrap="word"
           />
         )}
 
-        {/* Subtext */}
+        {tagline && (
+          <Text
+            text={tagline}
+            x={padding} y={headlineEndY} width={width - padding * 2}
+            fontSize={tSize}
+            fontFamily={taglineFont}
+            fontStyle="italic"
+            fill={taglineColor || autoTextColor}
+            opacity={taglineColor ? 1 : 0.9}
+            lineHeight={1.3} wrap="word"
+          />
+        )}
+
         {subtext && (
           <Text
             text={subtext}
-            x={padding}
-            y={textAreaY + headlineSize * 1.3 + 8}
-            width={width - padding * 2}
-            fontSize={subtextSize}
-            fontFamily="DM Sans"
-            fill={textColor}
-            opacity={0.85}
-            lineHeight={1.4}
-            wrap="word"
+            x={padding} y={subtextStartY} width={width - padding * 2}
+            fontSize={sSize}
+            fontFamily={subtextFont}
+            fill={subtextColor || autoTextColor}
+            opacity={subtextColor ? 1 : 0.8}
+            lineHeight={1.6} wrap="word"
           />
         )}
 
-        {/* CTA Button */}
         {ctaText && (
-          <Group x={padding} y={height - padding - ctaFontSize * 2.8}>
+          <Group x={padding} y={height - padding - cSize * 2.8}>
             <Rect
-              width={Math.max(ctaText.length * ctaFontSize * 0.65, 100)}
-              height={ctaFontSize * 2.5}
-              fill="#FF6B35"
-              cornerRadius={6}
+              width={Math.max(ctaText.length * cSize * 0.65, 100)}
+              height={cSize * 2.5}
+              fill={ctaColor || '#0A0A0A'}
             />
             <Text
               text={ctaText.toUpperCase()}
-              width={Math.max(ctaText.length * ctaFontSize * 0.65, 100)}
-              height={ctaFontSize * 2.5}
-              align="center"
-              verticalAlign="middle"
-              fontSize={ctaFontSize}
-              fontFamily="DM Sans"
-              fontStyle="bold"
+              width={Math.max(ctaText.length * cSize * 0.65, 100)}
+              height={cSize * 2.5}
+              align="center" verticalAlign="middle"
+              fontSize={cSize}
+              fontFamily={ctaFont}
+              fontStyle="500"
               fill="#FFFFFF"
               letterSpacing={1}
             />
           </Group>
         )}
 
-        {/* Brand color accent strip at bottom */}
-        <Rect
-          x={0}
-          y={height - 4}
-          width={width}
-          height={4}
-          fill={brandColor}
-        />
+        <Rect x={0} y={height - 3} width={width} height={3} fill={brandColor} />
       </Layer>
     </Stage>
   )
-}
-
-/**
- * Get Konva stage ref for export — exposed as a separate utility.
- */
-export function getStageRef(ref) {
-  return ref?.current?.getStage()
 }

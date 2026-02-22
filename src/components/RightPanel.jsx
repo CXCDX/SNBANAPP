@@ -1,17 +1,13 @@
 import ExportPanel from './ExportPanel'
-import PreviewGrid from './PreviewGrid'
 
-export default function RightPanel({ className = '' }) {
+export default function RightPanel() {
   return (
     <aside
-      className={`w-70 shrink-0 bg-surface border-l border-border overflow-y-auto ${className}`}
+      className="w-[560px] shrink-0 bg-surface overflow-y-auto"
+      style={{ borderLeft: '0.5px solid #E0E0DC' }}
       aria-label="Formats and export panel"
     >
-      <div className="p-4 space-y-6">
-        <PreviewGrid />
-
-        <div className="h-px bg-border" />
-
+      <div className="px-3 pt-5 pb-8">
         <ExportPanel />
       </div>
     </aside>

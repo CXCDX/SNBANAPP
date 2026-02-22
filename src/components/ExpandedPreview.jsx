@@ -11,7 +11,6 @@ export default function ExpandedPreview() {
   const format = AD_FORMATS.find(f => f.id === expandedFormat)
   if (!format) return null
 
-  // Scale to fit viewport (max 80vw / 80vh)
   const maxW = window.innerWidth * 0.8
   const maxH = window.innerHeight * 0.8
   const scaleW = maxW / format.width
@@ -20,7 +19,7 @@ export default function ExpandedPreview() {
 
   return (
     <div
-      className="fixed inset-0 z-40 bg-bg/90 backdrop-blur-sm flex items-center justify-center"
+      className="fixed inset-0 z-40 bg-bg/95 flex items-center justify-center"
       onClick={() => dispatch({ type: 'SET_EXPANDED_FORMAT', payload: null })}
       role="dialog"
       aria-modal="true"
@@ -30,20 +29,20 @@ export default function ExpandedPreview() {
         className="relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-4 flex items-end justify-between">
           <div>
-            <h2 className="text-lg font-heading font-bold text-text-primary">{format.name}</h2>
-            <p className="text-xs font-mono text-text-secondary">{format.width}×{format.height}</p>
+            <h2 className="text-[16px] font-editorial text-ink">{format.name}</h2>
+            <p className="text-[11px] font-mono text-secondary">{format.width} &times; {format.height}</p>
           </div>
           <button
             onClick={() => dispatch({ type: 'SET_EXPANDED_FORMAT', payload: null })}
-            className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-text-secondary hover:text-text-primary hover:border-accent transition-colors"
+            className="text-[11px] font-mono text-secondary hover:text-ink hover:underline bg-transparent border-none cursor-pointer"
             aria-label="Close expanded preview"
           >
-            ✕
+            Close
           </button>
         </div>
-        <div className="rounded-lg overflow-hidden border border-border shadow-2xl">
+        <div>
           <BannerCanvas format={format} scale={scale} />
         </div>
       </div>

@@ -13,17 +13,12 @@ function ToastItem({ toast }) {
     return () => clearTimeout(timer)
   }, [toast.id, dispatch])
 
-  const bgColor = toast.variant === 'error'
-    ? 'bg-danger'
-    : toast.variant === 'success'
-      ? 'bg-green-600'
-      : 'bg-surface'
-
   return (
     <div
       role="alert"
       aria-live="polite"
-      className={`${bgColor} border border-border rounded-lg px-4 py-3 text-sm text-text-primary shadow-lg ${exiting ? 'toast-exit' : 'toast-enter'}`}
+      className={`bg-bg px-5 py-3 text-[11px] font-mono text-ink ${exiting ? 'toast-exit' : 'toast-enter'}`}
+      style={{ borderLeft: toast.variant === 'error' ? '2px solid #FF3D57' : '2px solid #0A0A0A' }}
     >
       {toast.message}
     </div>
@@ -34,7 +29,7 @@ export default function ToastContainer() {
   const { toasts } = useAppState()
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-2" aria-label="Notifications">
+    <div className="fixed bottom-6 left-16 z-50 flex flex-col gap-2" aria-label="Notifications">
       {toasts.map(t => (
         <ToastItem key={t.id} toast={t} />
       ))}
