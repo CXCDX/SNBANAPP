@@ -1,9 +1,52 @@
+import { useState } from 'react'
 import ImageUpload from './ImageUpload'
 import TextInputs from './TextInputs'
 import LogoSelector from './LogoSelector'
 import BadgeLibrary from './BadgeLibrary'
 import FontManager from './FontManager'
 import CsvBulkUpload from './CsvBulkUpload'
+
+function CollapsibleSection({ title, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 bg-transparent border-none cursor-pointer p-0 py-1"
+        aria-expanded={open}
+        aria-label={`${open ? 'Collapse' : 'Expand'} ${title} section`}
+      >
+        <span
+          className="text-secondary transition-transform duration-200 inline-block"
+          style={{
+            fontSize: '8px',
+            transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
+          }}
+        >
+          ▼
+        </span>
+        <span
+          className="text-ink uppercase"
+          style={{
+            fontFamily: "'DM Mono', monospace",
+            fontSize: '12px',
+            letterSpacing: '0.1em',
+          }}
+        >
+          {title}
+        </span>
+      </button>
+      <div className={`section-collapse ${open ? '' : 'collapsed'}`}>
+        <div>
+          <div className="pt-2 pb-1">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function LeftPanel() {
   return (
@@ -12,41 +55,56 @@ export default function LeftPanel() {
       <div className="w-10 bg-sidebar shrink-0" />
 
       {/* Controls */}
-      <aside className="w-[200px] shrink-0 bg-surface overflow-y-auto" style={{ borderRight: '0.5px solid #E0E0DC' }}>
-        <div className="px-3 pt-5 pb-8 space-y-5">
+      <aside className="w-[480px] shrink-0 bg-surface overflow-y-auto" style={{ borderRight: '0.5px solid #E0E0DC' }}>
+        <div className="px-4 pt-5 pb-8 space-y-4">
           {/* Masthead */}
           <header className="space-y-0.5">
-            <p className="font-editorial text-[12px] uppercase tracking-[0.12em] leading-none text-ink">
+            <p
+              className="uppercase leading-none text-ink"
+              style={{ fontFamily: "'Playfair Display', serif", fontSize: '12px', letterSpacing: '0.12em' }}
+            >
               Banner Studio
             </p>
-            <p className="font-editorial text-[9px] uppercase tracking-[0.12em] leading-none text-secondary">
+            <p
+              className="uppercase leading-none text-secondary"
+              style={{ fontFamily: "'Playfair Display', serif", fontSize: '11px', letterSpacing: '0.12em' }}
+            >
               SharkNinja
             </p>
           </header>
 
           <div className="h-px bg-border" />
 
-          <ImageUpload />
+          <CollapsibleSection title="Image" defaultOpen={true}>
+            <ImageUpload />
+          </CollapsibleSection>
 
           <div className="h-px bg-border" />
 
-          <FontManager />
+          <CollapsibleSection title="Text" defaultOpen={true}>
+            <TextInputs />
+          </CollapsibleSection>
 
           <div className="h-px bg-border" />
 
-          <TextInputs />
+          <CollapsibleSection title="Fonts" defaultOpen={false}>
+            <FontManager />
+          </CollapsibleSection>
 
           <div className="h-px bg-border" />
 
-          <BadgeLibrary />
+          <CollapsibleSection title="Badges" defaultOpen={false}>
+            <BadgeLibrary />
+          </CollapsibleSection>
 
           <div className="h-px bg-border" />
 
-          <LogoSelector />
-
-          <div className="h-px bg-border" />
-
-          <CsvBulkUpload />
+          <CollapsibleSection title="Brand" defaultOpen={false}>
+            <LogoSelector />
+            <div className="mt-4">
+              <CsvBulkUpload />
+            </div>
+          </CollapsibleSection>
         </div>
       </aside>
     </div>

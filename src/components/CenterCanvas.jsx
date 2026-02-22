@@ -41,14 +41,24 @@ export default function CenterCanvas() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const sideMargin = 60
-  const maxCanvasWidth = 500
-  const rawAvailW = containerSize.width - sideMargin * 2
-  const availW = Math.min(rawAvailW, maxCanvasWidth)
-  const availH = containerSize.height - 200
+  // Smart scaling: fill center, min 400px shortest side
+  const margin = 40
+  const tabBarHeight = 120
+  const availW = containerSize.width - margin * 2
+  const availH = containerSize.height - tabBarHeight - margin * 2
+
   const scaleW = availW / format.width
   const scaleH = availH / format.height
-  const scale = Math.min(scaleW, scaleH, 1)
+  // Use the smaller scale to fit within container, allow scaling UP
+  let scale = Math.min(scaleW, scaleH)
+  // Ensure minimum 400px on shortest display side
+  const shortestSide = Math.min(format.width, format.height) * scale
+  if (shortestSide < 400 && Math.min(format.width, format.height) > 0) {
+    const minScale = 400 / Math.min(format.width, format.height)
+    scale = Math.max(scale, minScale)
+  }
+  // But don't overflow the container
+  scale = Math.min(scale, scaleW, scaleH)
 
   const handleEditFormat = () => {
     dispatch({ type: 'SET_EDITING_FORMAT', payload: format.id })
@@ -58,7 +68,7 @@ export default function CenterCanvas() {
     <main
       id="canvas-container"
       className="flex-1 flex flex-col items-center justify-center dot-grid min-h-0 overflow-hidden"
-      style={{ padding: `0 ${sideMargin}px` }}
+      style={{ background: '#F0F0EC' }}
       aria-label="Banner preview area"
     >
       {/* Platform tabs */}
@@ -71,8 +81,9 @@ export default function CenterCanvas() {
               const first = AD_FORMATS.find(f => f.platform === p)
               if (first) dispatch({ type: 'SET_SELECTED_FORMAT', payload: first.id })
             }}
-            className="text-[9px] font-mono uppercase tracking-[0.08em] bg-transparent border-none cursor-pointer pb-0.5 transition-all"
+            className="font-mono uppercase tracking-[0.08em] bg-transparent border-none cursor-pointer pb-0.5 transition-all"
             style={{
+              fontSize: '11px',
               color: activePlatform === p ? '#0A0A0A' : '#999994',
               borderBottom: activePlatform === p ? '1px solid #0A0A0A' : '1px solid transparent',
             }}
@@ -88,8 +99,9 @@ export default function CenterCanvas() {
           <button
             key={f.id}
             onClick={() => dispatch({ type: 'SET_SELECTED_FORMAT', payload: f.id })}
-            className="text-[9px] font-mono bg-transparent border-none cursor-pointer pb-0.5 transition-all"
+            className="font-mono bg-transparent border-none cursor-pointer pb-0.5 transition-all"
             style={{
+              fontSize: '11px',
               color: format.id === f.id ? '#0A0A0A' : '#999994',
               borderBottom: format.id === f.id ? '2px solid #0A0A0A' : '2px solid transparent',
             }}
@@ -103,7 +115,7 @@ export default function CenterCanvas() {
 
       {/* Canvas — floating in space */}
       <div
-        style={{ boxShadow: '0 4px 40px rgba(0,0,0,0.06)', maxWidth: `${maxCanvasWidth}px`, cursor: 'pointer' }}
+        style={{ boxShadow: '0 4px 40px rgba(0,0,0,0.06)', cursor: 'pointer' }}
         onDoubleClick={handleEditFormat}
         title="Double-click to edit"
       >
@@ -112,14 +124,15 @@ export default function CenterCanvas() {
 
       {/* Format label */}
       <div className="mt-4 text-center">
-        <p className="text-[10px] font-mono text-ink">{format.name}</p>
-        <p className="text-[8px] font-mono text-secondary mt-0.5">
+        <p className="font-mono text-ink" style={{ fontSize: '11px' }}>{format.name}</p>
+        <p className="font-mono text-secondary mt-0.5" style={{ fontSize: '11px' }}>
           {format.width} &times; {format.height}
           {image && ` / ${Math.round(scale * 100)}%`}
         </p>
         <button
           onClick={handleEditFormat}
-          className="text-[8px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer mt-1"
+          className="font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer mt-1"
+          style={{ fontSize: '11px' }}
         >
           Edit in canvas
         </button>

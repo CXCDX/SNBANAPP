@@ -27,7 +27,7 @@ function MobileView() {
             <p className="font-editorial text-[12px] uppercase tracking-[0.12em] leading-none text-ink">
               Banner Studio
             </p>
-            <p className="font-editorial text-[9px] uppercase tracking-[0.12em] leading-none text-secondary">
+            <p className="font-editorial text-[11px] uppercase tracking-[0.12em] leading-none text-secondary">
               SharkNinja
             </p>
           </header>

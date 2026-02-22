@@ -11,8 +11,8 @@ const POSITIONS = [
 ]
 
 // Inline SVG logos
-const SHARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none"><text x="0" y="32" font-family="Arial Black,sans-serif" font-weight="900" font-size="32" fill="#0A0A0A" letter-spacing="3">SHARK</text></svg>`
-const NINJA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none"><text x="0" y="32" font-family="Arial Black,sans-serif" font-weight="900" font-size="32" fill="#0A0A0A" letter-spacing="3">NINJA</text></svg>`
+const SHARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none"><text x="0" y="32" font-family="Barlow Condensed,sans-serif" font-weight="700" font-size="32" fill="#0A0A0A" letter-spacing="3">SHARK</text></svg>`
+const NINJA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none"><text x="0" y="32" font-family="Barlow Condensed,sans-serif" font-weight="700" font-size="32" fill="#0A0A0A" letter-spacing="3">NINJA</text></svg>`
 
 function svgToDataURL(svg) {
   return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)))
@@ -71,9 +71,6 @@ export default function LogoSelector() {
 
   return (
     <div className="space-y-3">
-      <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink">
-        Logo
-      </h3>
 
       {/* Type toggle */}
       <div className="flex gap-1">
@@ -81,7 +78,7 @@ export default function LogoSelector() {
           <button
             key={type}
             onClick={() => setLogoType(type)}
-            className="text-[9px] font-mono uppercase tracking-[0.08em] px-2 py-1 cursor-pointer transition-all"
+            className="text-[11px] font-mono uppercase tracking-[0.08em] px-2 py-1 cursor-pointer transition-all"
             style={{
               background: logoType === type ? '#0A0A0A' : 'transparent',
               color: logoType === type ? '#FAFAF8' : '#999994',
@@ -101,16 +98,16 @@ export default function LogoSelector() {
             {logo ? (
               <div className="flex items-center gap-2">
                 <img src={logo} alt="Logo" className="h-5 w-auto object-contain" />
-                <span className="text-[9px] font-mono text-secondary hover:underline">Replace</span>
+                <span className="text-[11px] font-mono text-secondary hover:underline">Replace</span>
               </div>
             ) : (
-              <p className="text-[9px] font-mono text-secondary hover:underline">Upload PNG</p>
+              <p className="text-[11px] font-mono text-secondary hover:underline">Upload PNG</p>
             )}
           </div>
           {logo && (
             <button
               onClick={removeLogo}
-              className="text-[9px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+              className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
             >
               Remove
             </button>
@@ -120,13 +117,13 @@ export default function LogoSelector() {
 
       {/* Position */}
       <div className="space-y-1">
-        <p className="text-[9px] font-mono text-secondary">Position</p>
+        <p className="text-[11px] font-mono text-secondary">Position</p>
         <div className="grid grid-cols-4 gap-1">
           {POSITIONS.map(pos => (
             <button
               key={pos.id}
               onClick={() => dispatch({ type: 'SET_LOGO_POSITION', payload: pos.id })}
-              className="text-[8px] font-mono py-1 cursor-pointer transition-all text-center"
+              className="text-[11px] font-mono py-1 cursor-pointer transition-all text-center"
               style={{
                 background: logoPosition === pos.id ? '#0A0A0A' : 'transparent',
                 color: logoPosition === pos.id ? '#FAFAF8' : '#999994',
@@ -142,8 +139,8 @@ export default function LogoSelector() {
       {/* Size slider */}
       <div className="space-y-1">
         <div className="flex justify-between">
-          <p className="text-[9px] font-mono text-secondary">Size</p>
-          <p className="text-[9px] font-mono text-secondary">{logoSize}px</p>
+          <p className="text-[11px] font-mono text-secondary">Size</p>
+          <p className="text-[11px] font-mono text-secondary">{logoSize}px</p>
         </div>
         <input
           type="range"
@@ -158,7 +155,7 @@ export default function LogoSelector() {
 
       {/* Brand color */}
       <div className="space-y-1">
-        <p className="text-[9px] font-mono text-secondary">Brand Color</p>
+        <p className="text-[11px] font-mono text-secondary">Brand Color</p>
         <div className="flex items-center gap-2">
           <input
             type="color"
@@ -166,7 +163,7 @@ export default function LogoSelector() {
             onChange={(e) => dispatch({ type: 'SET_BRAND_COLOR', payload: e.target.value })}
             className="w-4 h-4"
           />
-          <span className="text-[9px] font-mono text-secondary">{brandColor}</span>
+          <span className="text-[11px] font-mono text-secondary">{brandColor}</span>
         </div>
       </div>
     </div>

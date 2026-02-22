@@ -21,9 +21,12 @@ export default function BannerCanvas({ format, scale = 1 }) {
     taglineFont, taglineColor, taglineSize,
     subtextFont, subtextColor, subtextSize,
     ctaFont, ctaColor, ctaSize,
-    activeBadgeSrc, focusPoint,
+    activeBadgeSrc, focusPoints,
     logoPosition, logoSize, badgePosition,
   } = useAppState()
+
+  const formatKey = `${format.width}x${format.height}`
+  const focusPoint = focusPoints[formatKey] || { x: 0.5, y: 0.5 }
   const stageRef = useRef(null)
   const [bgImage, setBgImage] = useState(null)
   const [logoImage, setLogoImage] = useState(null)

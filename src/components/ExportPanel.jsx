@@ -154,13 +154,13 @@ export default function ExportPanel() {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink mb-3">
+        <h3 className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink mb-3">
           Formats
         </h3>
         <FormatChecklist enabledFormats={enabledFormats} onToggle={toggleFormat} />
       </div>
 
-      <div className="flex gap-2 text-[10px] font-mono">
+      <div className="flex gap-2 text-[11px] font-mono">
         <button
           onClick={selectAll}
           className="text-ink hover:underline bg-transparent border-none cursor-pointer p-0"
@@ -180,13 +180,13 @@ export default function ExportPanel() {
 
       {/* Quality selector */}
       <div className="space-y-1">
-        <p className="text-[9px] font-mono text-secondary">Quality</p>
+        <p className="text-[11px] font-mono text-secondary">Quality</p>
         <div className="flex gap-1">
           {QUALITY_OPTIONS.map(opt => (
             <button
               key={opt.value}
               onClick={() => dispatch({ type: 'SET_EXPORT_QUALITY', payload: opt.value })}
-              className="text-[8px] font-mono px-2 py-1 cursor-pointer transition-all"
+              className="text-[11px] font-mono px-2 py-1 cursor-pointer transition-all"
               style={{
                 background: state.exportQuality === opt.value ? '#0A0A0A' : 'transparent',
                 color: state.exportQuality === opt.value ? '#FAFAF8' : '#999994',
@@ -202,7 +202,7 @@ export default function ExportPanel() {
       <button
         onClick={handleExport}
         disabled={state.isExporting || enabledFormats.length === 0}
-        className="w-full py-2.5 px-3 text-[10px] font-mono uppercase tracking-[0.15em]
+        className="w-full py-2.5 px-3 text-[11px] font-mono uppercase tracking-[0.15em]
           bg-ink text-bg
           hover:bg-bg hover:text-ink
           disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-ink disabled:hover:text-bg
@@ -259,7 +259,9 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
   ctx.fillRect(0, 0, format.width, format.height)
 
   if (bgImg) {
-    const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height, state.focusPoint)
+    const formatKey = `${format.width}x${format.height}`
+    const focusPoint = state.focusPoints?.[formatKey] || { x: 0.5, y: 0.5 }
+    const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height, focusPoint)
     ctx.drawImage(bgImg, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, format.width, format.height)
     const gradient = ctx.createLinearGradient(0, format.height * 0.3, 0, format.height)
     gradient.addColorStop(0, overlayGradient.to)

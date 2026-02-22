@@ -70,9 +70,6 @@ export default function BadgeLibrary() {
 
   return (
     <div className="space-y-2">
-      <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink">
-        Badges
-      </h3>
 
       {/* Upload area */}
       <div className="space-y-1.5">
@@ -86,10 +83,10 @@ export default function BadgeLibrary() {
           {pendingFile ? (
             <div className="flex items-center gap-2">
               <img src={pendingFile.src} alt="Badge preview" className="h-6 w-6 object-contain" />
-              <span className="text-[9px] font-mono text-secondary truncate flex-1">{pendingFile.fileName}</span>
+              <span className="text-[11px] font-mono text-secondary truncate flex-1">{pendingFile.fileName}</span>
             </div>
           ) : (
-            <p className="text-[10px] font-mono text-secondary hover:underline">Upload SVG or PNG</p>
+            <p className="text-[11px] font-mono text-secondary hover:underline">Upload SVG or PNG</p>
           )}
         </div>
 
@@ -107,7 +104,7 @@ export default function BadgeLibrary() {
             <button
               onClick={handleSave}
               disabled={!badgeName.trim()}
-              className="text-[10px] font-mono text-ink hover:underline bg-transparent border-none cursor-pointer p-0 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="text-[11px] font-mono text-ink hover:underline bg-transparent border-none cursor-pointer p-0 disabled:opacity-30 disabled:cursor-not-allowed"
               aria-label="Save badge to library"
             >
               Save to library
@@ -118,13 +115,13 @@ export default function BadgeLibrary() {
 
       {/* Position selector */}
       <div className="space-y-1">
-        <p className="text-[9px] font-mono text-secondary">Position</p>
+        <p className="text-[11px] font-mono text-secondary">Position</p>
         <div className="grid grid-cols-4 gap-1">
           {POSITIONS.map(pos => (
             <button
               key={pos.id}
               onClick={() => dispatch({ type: 'SET_BADGE_POSITION', payload: pos.id })}
-              className="text-[8px] font-mono py-1 cursor-pointer transition-all text-center"
+              className="text-[11px] font-mono py-1 cursor-pointer transition-all text-center"
               style={{
                 background: badgePosition === pos.id ? '#0A0A0A' : 'transparent',
                 color: badgePosition === pos.id ? '#FAFAF8' : '#999994',
@@ -140,7 +137,7 @@ export default function BadgeLibrary() {
       {/* Library grid */}
       {badgeLibrary.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[9px] font-mono text-secondary">Library</p>
+          <p className="text-[11px] font-mono text-secondary">Library</p>
           <div className="grid grid-cols-3 gap-1.5">
             {badgeLibrary.map((badge) => (
               <div key={badge.id} className="relative group">
@@ -154,13 +151,13 @@ export default function BadgeLibrary() {
                   title={badge.name}
                 >
                   <img src={badge.src} alt={badge.name} className="h-6 w-6 object-contain" />
-                  <span className="text-[7px] font-mono text-secondary truncate w-full text-center">
+                  <span className="text-[11px] font-mono text-secondary truncate w-full text-center">
                     {badge.name}
                   </span>
                 </button>
                 <button
                   onClick={() => handleDelete(badge.id)}
-                  className="absolute -top-1 -right-1 w-3 h-3 text-[7px] leading-none bg-surface text-secondary hover:text-danger border border-border cursor-pointer hidden group-hover:flex items-center justify-center"
+                  className="absolute -top-1 -right-1 w-3 h-3 text-[11px] leading-none bg-surface text-secondary hover:text-danger border border-border cursor-pointer hidden group-hover:flex items-center justify-center"
                   aria-label={`Delete badge ${badge.name}`}
                 >
                   &times;
@@ -171,7 +168,7 @@ export default function BadgeLibrary() {
           {activeBadgeSrc && (
             <button
               onClick={() => dispatch({ type: 'CLEAR_ACTIVE_BADGE' })}
-              className="text-[10px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+              className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
               aria-label="Remove badge from canvas"
             >
               Clear badge

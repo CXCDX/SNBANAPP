@@ -137,9 +137,6 @@ export default function CsvBulkUpload() {
 
   return (
     <div className="space-y-3">
-      <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink">
-        CSV Bulk
-      </h3>
 
       <div
         {...getRootProps()}
@@ -147,27 +144,27 @@ export default function CsvBulkUpload() {
         style={{ border: '1px dashed #E0E0DC' }}
       >
         <input {...getInputProps()} />
-        <p className="text-[10px] font-mono text-secondary">
+        <p className="text-[11px] font-mono text-secondary">
           {isDragActive ? 'Drop CSV' : 'Drop CSV or click'}
         </p>
       </div>
 
       <button
         onClick={downloadTemplate}
-        className="text-[9px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+        className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
       >
         Download CSV Template
       </button>
 
       {state.csvData && (
         <div className="space-y-2">
-          <p className="text-[9px] font-mono text-ink">
+          <p className="text-[11px] font-mono text-ink">
             {state.csvFileName} — {state.csvData.length} rows
           </p>
 
           {/* Preview table */}
           <div className="overflow-x-auto" style={{ maxHeight: '120px' }}>
-            <table className="w-full text-[8px] font-mono">
+            <table className="w-full text-[11px] font-mono">
               <thead>
                 <tr className="text-left text-secondary">
                   <th className="pr-2 pb-1">#</th>
@@ -188,7 +185,7 @@ export default function CsvBulkUpload() {
               </tbody>
             </table>
             {state.csvData.length > 5 && (
-              <p className="text-[8px] font-mono text-secondary mt-1">+{state.csvData.length - 5} more rows</p>
+              <p className="text-[11px] font-mono text-secondary mt-1">+{state.csvData.length - 5} more rows</p>
             )}
           </div>
 
@@ -201,7 +198,7 @@ export default function CsvBulkUpload() {
                   style={{ width: `${(state.exportProgress.current / state.exportProgress.total) * 100}%` }}
                 />
               </div>
-              <p className="text-[8px] font-mono text-secondary">
+              <p className="text-[11px] font-mono text-secondary">
                 {state.exportProgress.current}/{state.exportProgress.total} banners generated
                 {state.exportProgress.batches > 0 && ` — ${state.exportProgress.batches} batches remaining`}
               </p>
@@ -212,14 +209,14 @@ export default function CsvBulkUpload() {
             {state.isExporting ? (
               <button
                 onClick={handleCancel}
-                className="text-[9px] font-mono text-danger hover:underline bg-transparent border-none cursor-pointer p-0"
+                className="text-[11px] font-mono text-danger hover:underline bg-transparent border-none cursor-pointer p-0"
               >
                 Cancel
               </button>
             ) : (
               <button
                 onClick={handleGenerate}
-                className="w-full py-2 px-2 text-[9px] font-mono uppercase tracking-[0.1em] bg-ink text-bg hover:bg-bg hover:text-ink transition-all cursor-pointer"
+                className="w-full py-2 px-2 text-[11px] font-mono uppercase tracking-[0.1em] bg-ink text-bg hover:bg-bg hover:text-ink transition-all cursor-pointer"
                 style={{ border: '1px solid #0A0A0A' }}
               >
                 Generate All ({state.csvData.length} rows &times; {enabledFormats.length} formats)
@@ -229,7 +226,7 @@ export default function CsvBulkUpload() {
 
           <button
             onClick={() => dispatch({ type: 'CLEAR_CSV_DATA' })}
-            className="text-[9px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+            className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
           >
             Clear CSV
           </button>
@@ -263,7 +260,9 @@ function renderBanner({ format, row, state, bgImg, logoImg, badgeImg, autoColor,
   ctx.fillRect(0, 0, format.width, format.height)
 
   if (bgImg) {
-    const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height, state.focusPoint)
+    const formatKey = `${format.width}x${format.height}`
+    const focusPoint = state.focusPoints?.[formatKey] || { x: 0.5, y: 0.5 }
+    const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height, focusPoint)
     ctx.drawImage(bgImg, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, format.width, format.height)
     const gradient = ctx.createLinearGradient(0, format.height * 0.3, 0, format.height)
     gradient.addColorStop(0, overlayGradient.to)

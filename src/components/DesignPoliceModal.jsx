@@ -40,24 +40,24 @@ export default function DesignPoliceModal({ onExportAnyway }) {
             {/* Errors */}
             {errors.map((issue, i) => (
               <div key={`e-${i}`} className="flex items-start gap-2">
-                <span className="text-[10px] mt-0.5 shrink-0" style={{ color: '#FF3D57' }}>&#9679;</span>
-                <p className="text-[10px] font-mono text-ink">{issue.message}</p>
+                <span className="text-[11px] mt-0.5 shrink-0" style={{ color: '#FF3D57' }}>&#9679;</span>
+                <p className="text-[11px] font-mono text-ink">{issue.message}</p>
               </div>
             ))}
 
             {/* Warnings */}
             {warnings.map((issue, i) => (
               <div key={`w-${i}`} className="flex items-start gap-2">
-                <span className="text-[10px] mt-0.5 shrink-0" style={{ color: '#FFB800' }}>&#9679;</span>
-                <p className="text-[10px] font-mono text-ink">{issue.message}</p>
+                <span className="text-[11px] mt-0.5 shrink-0" style={{ color: '#FFB800' }}>&#9679;</span>
+                <p className="text-[11px] font-mono text-ink">{issue.message}</p>
               </div>
             ))}
 
             {/* Passes */}
             {passes.map((issue, i) => (
               <div key={`p-${i}`} className="flex items-start gap-2">
-                <span className="text-[10px] mt-0.5 shrink-0" style={{ color: '#2DD881' }}>&#10003;</span>
-                <p className="text-[10px] font-mono text-secondary">{issue.message}</p>
+                <span className="text-[11px] mt-0.5 shrink-0" style={{ color: '#2DD881' }}>&#10003;</span>
+                <p className="text-[11px] font-mono text-secondary">{issue.message}</p>
               </div>
             ))}
           </div>
@@ -67,7 +67,7 @@ export default function DesignPoliceModal({ onExportAnyway }) {
           {hasErrors && (
             <button
               onClick={fixIssues}
-              className="flex-1 py-2 text-[9px] font-mono uppercase tracking-[0.1em] cursor-pointer transition-all"
+              className="flex-1 py-2 text-[11px] font-mono uppercase tracking-[0.1em] cursor-pointer transition-all"
               style={{
                 background: 'transparent',
                 color: '#FF3D57',
@@ -79,7 +79,7 @@ export default function DesignPoliceModal({ onExportAnyway }) {
           )}
           <button
             onClick={exportAnyway}
-            className="flex-1 py-2 text-[9px] font-mono uppercase tracking-[0.1em] bg-ink text-bg cursor-pointer transition-all hover:bg-bg hover:text-ink"
+            className="flex-1 py-2 text-[11px] font-mono uppercase tracking-[0.1em] bg-ink text-bg cursor-pointer transition-all hover:bg-bg hover:text-ink"
             style={{ border: '1px solid #0A0A0A' }}
           >
             Export Anyway

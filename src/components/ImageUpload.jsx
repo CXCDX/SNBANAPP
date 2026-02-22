@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useAppState, useAppDispatch } from '../store/AppContext'
 import { getImageLuminance } from '../utils/luminance'
+import { AD_FORMATS } from '../utils/formats'
 import FocusPointSelector from './FocusPointSelector'
 
 export default function ImageUpload() {
@@ -27,6 +28,9 @@ export default function ImageUpload() {
             luminance,
           },
         })
+        // Initialize per-format focus points to center
+        const formatKeys = AD_FORMATS.map(f => `${f.width}x${f.height}`)
+        dispatch({ type: 'INIT_FOCUS_POINTS', payload: formatKeys })
         dispatch({ type: 'ADD_TOAST', payload: { message: `Loaded: ${file.name}`, variant: 'success' } })
       }
       img.src = reader.result
@@ -43,9 +47,6 @@ export default function ImageUpload() {
 
   return (
     <div className="space-y-2">
-      <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink">
-        Image
-      </h3>
       <div
         {...getRootProps()}
         className={`cursor-pointer transition-opacity duration-200 ${isDragActive ? 'opacity-50' : ''}`}
@@ -55,17 +56,17 @@ export default function ImageUpload() {
         <input {...getInputProps()} aria-label="File input for background image" />
         {image ? (
           <div className="space-y-1">
-            <p className="text-[10px] font-mono text-secondary truncate">{image.name}</p>
-            <p className="text-[9px] font-mono text-secondary">
+            <p className="text-[11px] font-mono text-secondary truncate">{image.name}</p>
+            <p className="text-[11px] font-mono text-secondary">
               {image.width} &times; {image.height}
             </p>
           </div>
         ) : (
           <div className="py-6 text-center" style={{ border: '1px dashed #E0E0DC' }}>
-            <p className="text-[10px] font-mono text-secondary">
+            <p className="text-[11px] font-mono text-secondary">
               {isDragActive ? 'Drop here' : 'Drop image or click'}
             </p>
-            <p className="text-[9px] font-mono text-secondary mt-1">PNG, JPG, WEBP</p>
+            <p className="text-[11px] font-mono text-secondary mt-1">PNG, JPG, WEBP</p>
           </div>
         )}
       </div>
@@ -76,7 +77,7 @@ export default function ImageUpload() {
             e.stopPropagation()
             dispatch({ type: 'CLEAR_IMAGE' })
           }}
-          className="text-[10px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+          className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Remove uploaded image"
         >
           Remove

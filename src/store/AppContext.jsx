@@ -5,12 +5,9 @@ const AppDispatchContext = createContext(null)
 
 const DEFAULT_FONTS = [
   'Playfair Display',
+  'Barlow Condensed',
+  'DM Sans',
   'DM Mono',
-  'Arial',
-  'Georgia',
-  'Times New Roman',
-  'Helvetica',
-  'Verdana',
 ]
 
 const MAX_HISTORY = 20
@@ -27,7 +24,7 @@ const persisted = loadPersisted()
 const initialState = {
   // Image
   image: null,
-  focusPoint: { x: 0.5, y: 0.5 },
+  focusPoints: {},
   // Text content
   headline: '',
   tagline: '',
@@ -35,18 +32,18 @@ const initialState = {
   ctaText: '',
   badge: '',
   // Per-field font + color + size
-  headlineFont: persisted.headlineFont || 'Playfair Display',
+  headlineFont: persisted.headlineFont || 'Barlow Condensed',
   headlineColor: persisted.headlineColor || '',
-  headlineSize: persisted.headlineSize || 48,
+  headlineSize: persisted.headlineSize || 72,
   taglineFont: persisted.taglineFont || 'Playfair Display',
   taglineColor: persisted.taglineColor || '',
-  taglineSize: persisted.taglineSize || 28,
-  subtextFont: persisted.subtextFont || 'DM Mono',
+  taglineSize: persisted.taglineSize || 36,
+  subtextFont: persisted.subtextFont || 'DM Sans',
   subtextColor: persisted.subtextColor || '',
-  subtextSize: persisted.subtextSize || 20,
-  ctaFont: persisted.ctaFont || 'DM Mono',
+  subtextSize: persisted.subtextSize || 18,
+  ctaFont: persisted.ctaFont || 'DM Sans',
   ctaColor: persisted.ctaColor || '',
-  ctaSize: persisted.ctaSize || 18,
+  ctaSize: persisted.ctaSize || 14,
   // Logo
   logo: null,
   logoType: persisted.logoType || 'custom',
@@ -84,7 +81,7 @@ const initialState = {
 }
 
 const UNDOABLE_ACTIONS = new Set([
-  'SET_IMAGE', 'CLEAR_IMAGE', 'SET_FOCUS_POINT',
+  'SET_IMAGE', 'CLEAR_IMAGE', 'SET_FORMAT_FOCUS_POINT',
   'SET_HEADLINE', 'SET_TAGLINE', 'SET_SUBTEXT', 'SET_CTA', 'SET_BADGE',
   'SET_FIELD_FONT', 'SET_FIELD_COLOR', 'SET_FIELD_SIZE',
   'SET_LOGO', 'SET_LOGO_TYPE', 'SET_LOGO_POSITION', 'SET_LOGO_SIZE',
@@ -138,9 +135,17 @@ function coreReducer(state, action) {
     case 'SET_IMAGE':
       return { ...state, image: action.payload }
     case 'CLEAR_IMAGE':
-      return { ...state, image: null, focusPoint: { x: 0.5, y: 0.5 } }
-    case 'SET_FOCUS_POINT':
-      return { ...state, focusPoint: action.payload }
+      return { ...state, image: null, focusPoints: {} }
+    case 'INIT_FOCUS_POINTS': {
+      const pts = {}
+      action.payload.forEach(key => { pts[key] = { x: 0.5, y: 0.5 } })
+      return { ...state, focusPoints: pts }
+    }
+    case 'SET_FORMAT_FOCUS_POINT':
+      return {
+        ...state,
+        focusPoints: { ...state.focusPoints, [action.payload.formatKey]: action.payload.point },
+      }
     case 'SET_HEADLINE':
       return { ...state, headline: action.payload.slice(0, 30) }
     case 'SET_TAGLINE':

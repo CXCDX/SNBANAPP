@@ -20,7 +20,7 @@ export default function MobileTabBar() {
         <button
           key={tab.id}
           onClick={() => dispatch({ type: 'SET_ACTIVE_TAB', payload: tab.id })}
-          className={`flex-1 py-3 text-[10px] font-mono uppercase tracking-[0.15em] bg-transparent border-none cursor-pointer transition-all
+          className={`flex-1 py-3 text-[11px] font-mono uppercase tracking-[0.15em] bg-transparent border-none cursor-pointer transition-all
             ${activeTab === tab.id ? 'text-ink' : 'text-secondary'}`}
           style={{
             borderTop: activeTab === tab.id ? '2px solid #0A0A0A' : '2px solid transparent',

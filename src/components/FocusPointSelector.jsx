@@ -1,11 +1,23 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useMemo } from 'react'
 import { useAppState, useAppDispatch } from '../store/AppContext'
+import { AD_FORMATS } from '../utils/formats'
 
 export default function FocusPointSelector() {
-  const { image, focusPoint } = useAppState()
+  const { image, focusPoints, selectedFormat } = useAppState()
   const dispatch = useAppDispatch()
   const containerRef = useRef(null)
   const dragging = useRef(false)
+
+  const format = useMemo(() => {
+    if (selectedFormat) {
+      const found = AD_FORMATS.find(f => f.id === selectedFormat)
+      if (found) return found
+    }
+    return AD_FORMATS[0]
+  }, [selectedFormat])
+
+  const formatKey = `${format.width}x${format.height}`
+  const focusPoint = focusPoints[formatKey] || { x: 0.5, y: 0.5 }
 
   const updatePoint = useCallback((e) => {
     const rect = containerRef.current?.getBoundingClientRect()
@@ -14,8 +26,8 @@ export default function FocusPointSelector() {
     const clientY = e.touches ? e.touches[0].clientY : e.clientY
     const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
     const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
-    dispatch({ type: 'SET_FOCUS_POINT', payload: { x, y } })
-  }, [dispatch])
+    dispatch({ type: 'SET_FORMAT_FOCUS_POINT', payload: { formatKey, point: { x, y } } })
+  }, [dispatch, formatKey])
 
   const handleDown = useCallback((e) => {
     e.preventDefault()
@@ -37,7 +49,7 @@ export default function FocusPointSelector() {
 
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-mono text-secondary">Focus point</p>
+      <p className="text-[11px] font-mono text-secondary">Focus point</p>
       <div
         ref={containerRef}
         className="relative cursor-crosshair select-none overflow-hidden"

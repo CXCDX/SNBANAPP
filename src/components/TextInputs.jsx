@@ -9,7 +9,7 @@ function FontSelect({ field, value }) {
     <select
       value={value}
       onChange={(e) => dispatch({ type: 'SET_FIELD_FONT', payload: { field, font: e.target.value } })}
-      className="w-full bg-transparent border-none text-[9px] font-mono text-secondary cursor-pointer p-0 focus:outline-none"
+      className="w-full bg-transparent border-none text-[11px] font-mono text-secondary cursor-pointer p-0 focus:outline-none"
       style={{ borderBottom: '1px solid #E0E0DC', paddingBottom: '1px' }}
       aria-label={`Font for ${field}`}
     >
@@ -34,13 +34,13 @@ function ColorPicker({ field, value, autoColor }) {
         className="w-4 h-4"
         aria-label={`Color for ${field}`}
       />
-      <span className="text-[8px] font-mono text-secondary">
+      <span className="text-[11px] font-mono text-secondary">
         {isAuto ? 'auto' : value}
       </span>
       {!isAuto && (
         <button
           onClick={() => dispatch({ type: 'SET_FIELD_COLOR', payload: { field, color: '' } })}
-          className="text-[8px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+          className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Reset to auto color"
         >
           reset
@@ -64,7 +64,7 @@ function SizeSlider({ field, value }) {
         style={{ accentColor: '#0A0A0A' }}
         aria-label={`Size for ${field}`}
       />
-      <span className="text-[8px] font-mono text-secondary w-6 text-right">{value}</span>
+      <span className="text-[11px] font-mono text-secondary w-6 text-right">{value}</span>
     </div>
   )
 }
@@ -76,11 +76,11 @@ function CharInput({ label, field, value, onChange, maxLength, placeholder, font
   return (
     <div className="space-y-1">
       <div className="flex justify-between items-baseline">
-        <label className="text-[10px] font-mono text-ink">
+        <label className="text-[11px] font-mono text-ink">
           {label}
         </label>
         {maxLength && (
-          <span className={`text-[9px] font-mono tabular-nums ${counterColor} transition-colors`}>
+          <span className={`text-[11px] font-mono tabular-nums ${counterColor} transition-colors`}>
             {value.length}/{maxLength}
           </span>
         )}
@@ -114,9 +114,6 @@ export default function TextInputs() {
 
   return (
     <div className="space-y-3">
-      <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink">
-        Text
-      </h3>
       <CharInput
         label="Headline"
         field="headline"

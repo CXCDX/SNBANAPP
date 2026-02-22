@@ -32,7 +32,7 @@ export default function ExpandedPreview() {
         <div className="mb-4 flex items-end justify-between">
           <div>
             <h2 className="text-[16px] font-editorial text-ink">{format.name}</h2>
-            <p className="text-[10px] font-mono text-secondary">{format.width} &times; {format.height}</p>
+            <p className="text-[11px] font-mono text-secondary">{format.width} &times; {format.height}</p>
           </div>
           <button
             onClick={() => dispatch({ type: 'SET_EXPANDED_FORMAT', payload: null })}

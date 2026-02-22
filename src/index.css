@@ -9,8 +9,10 @@
   --color-danger: #FF3D57;
   --color-sidebar: #0A0A0A;
 
-  --font-editorial: 'Playfair Display', Georgia, serif;
-  --font-mono: 'DM Mono', 'Courier New', monospace;
+  --font-editorial: 'Playfair Display', serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-condensed: 'Barlow Condensed', sans-serif;
 }
 
 * {
@@ -46,7 +48,7 @@ body {
 
 /* Very subtle dot-grid */
 .dot-grid {
-  background-image: radial-gradient(circle, #EBEBEB 0.6px, transparent 0.6px);
+  background-image: radial-gradient(circle, #E0E0DC 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -73,14 +75,15 @@ body {
   border: none;
   border-bottom: 1px solid var(--color-border);
   padding: 4px 0;
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-family: var(--font-sans);
+  font-size: 14px;
   line-height: 1.6;
   color: var(--color-ink);
   transition: border-color 0.2s ease;
 }
 .input-editorial::placeholder {
   color: #C8C8C4;
+  opacity: 0.4;
 }
 .input-editorial:focus {
   outline: none;
@@ -125,4 +128,19 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 }
 input[type="color"]::-webkit-color-swatch {
   border: none;
+}
+
+/* Collapsible section animation */
+.section-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 200ms ease, opacity 200ms ease;
+  opacity: 1;
+}
+.section-collapse.collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.section-collapse > div {
+  overflow: hidden;
 }

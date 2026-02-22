@@ -31,7 +31,7 @@ export default function BrandSettings() {
 
       {/* Logo */}
       <div className="space-y-1">
-        <label className="text-[10px] font-mono text-ink">
+        <label className="text-[11px] font-mono text-ink">
           Logo
         </label>
         <div
@@ -44,16 +44,16 @@ export default function BrandSettings() {
           {logo ? (
             <div className="flex items-center gap-2">
               <img src={logo} alt="Brand logo" className="h-5 w-auto object-contain" />
-              <span className="text-[10px] font-mono text-secondary hover:underline">Replace</span>
+              <span className="text-[11px] font-mono text-secondary hover:underline">Replace</span>
             </div>
           ) : (
-            <p className="text-[10px] font-mono text-secondary hover:underline">Upload logo</p>
+            <p className="text-[11px] font-mono text-secondary hover:underline">Upload logo</p>
           )}
         </div>
         {logo && (
           <button
             onClick={() => dispatch({ type: 'SET_LOGO', payload: null })}
-            className="text-[10px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+            className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
             aria-label="Remove logo"
           >
             Remove
@@ -63,7 +63,7 @@ export default function BrandSettings() {
 
       {/* Brand color */}
       <div className="space-y-1">
-        <label className="text-[10px] font-mono text-ink">
+        <label className="text-[11px] font-mono text-ink">
           Color
         </label>
         <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export default function BrandSettings() {
             className="w-5 h-5"
             aria-label="Brand primary color picker"
           />
-          <span className="text-[10px] font-mono text-secondary">{brandColor}</span>
+          <span className="text-[11px] font-mono text-secondary">{brandColor}</span>
         </div>
       </div>
     </div>

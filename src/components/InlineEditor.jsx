@@ -10,7 +10,7 @@ export default function InlineEditor() {
   const dispatch = useAppDispatch()
   const {
     editingFormat, image, headline, tagline, subtext, ctaText, badge,
-    logo, brandColor, focusPoint, activeBadgeSrc, textPositions,
+    logo, brandColor, focusPoints, activeBadgeSrc, textPositions,
     headlineFont, headlineColor, headlineSize,
     taglineFont, taglineColor, taglineSize,
     subtextFont, subtextColor, subtextSize,
@@ -81,6 +81,8 @@ export default function InlineEditor() {
   if (!format) return null
 
   const { width, height } = format
+  const formatKey = `${width}x${height}`
+  const focusPoint = focusPoints[formatKey] || { x: 0.5, y: 0.5 }
   const padding = 60
   const availW = containerSize.w - padding * 2
   const availH = containerSize.h - padding * 2 - 80
@@ -159,7 +161,7 @@ export default function InlineEditor() {
     if (!pointer) return
     const x = pointer.x / scale / width
     const y = pointer.y / scale / height
-    dispatch({ type: 'SET_FOCUS_POINT', payload: { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) } })
+    dispatch({ type: 'SET_FORMAT_FOCUS_POINT', payload: { formatKey, point: { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) } } })
   }
 
   const cornerPos = (pos, w, h) => {
@@ -178,18 +180,18 @@ export default function InlineEditor() {
       <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: '0.5px solid #E0E0DC' }}>
         <div>
           <p className="text-[11px] font-mono text-ink">{format.name}</p>
-          <p className="text-[9px] font-mono text-secondary">{width}&times;{height} — Double-click text to edit, drag to reposition</p>
+          <p className="text-[11px] font-mono text-secondary">{width}&times;{height} — Double-click text to edit, drag to reposition</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={handleCancel}
-            className="text-[10px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer"
+            className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="text-[10px] font-mono px-3 py-1 bg-ink text-bg cursor-pointer hover:bg-bg hover:text-ink transition-all"
+            className="text-[11px] font-mono px-3 py-1 bg-ink text-bg cursor-pointer hover:bg-bg hover:text-ink transition-all"
             style={{ border: '1px solid #0A0A0A' }}
           >
             Save
@@ -207,7 +209,7 @@ export default function InlineEditor() {
             onClick={handleTextEditDone}
           >
             <div onClick={e => e.stopPropagation()} className="w-[400px] space-y-3 bg-surface p-6" style={{ border: '1px solid #E0E0DC' }}>
-              <p className="text-[10px] font-mono text-secondary uppercase">{editingText.field}</p>
+              <p className="text-[11px] font-mono text-secondary uppercase">{editingText.field}</p>
               <textarea
                 autoFocus
                 value={editingText.value}
@@ -217,7 +219,7 @@ export default function InlineEditor() {
               />
               <button
                 onClick={handleTextEditDone}
-                className="text-[10px] font-mono px-3 py-1 bg-ink text-bg cursor-pointer"
+                className="text-[11px] font-mono px-3 py-1 bg-ink text-bg cursor-pointer"
                 style={{ border: '1px solid #0A0A0A' }}
               >
                 Done
