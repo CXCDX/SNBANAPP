@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
-import { Stage, Layer, Rect, Text, Image as KonvaImage, Group } from 'react-konva'
+import { Stage, Layer, Rect, Text, Image as KonvaImage, Group, Circle, Star, Shape } from 'react-konva'
 import { useAppState } from '../store/AppContext'
 import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
@@ -14,6 +14,75 @@ function getCornerPos(position, canvasW, canvasH, elemW, elemH, padding) {
   }
 }
 
+function BadgeDesigner({ x, y, size, shape, bgColor, textColor, borderColor, borderWidth, fontFamily, fontSize, bold, italic, textAlign, line1, line2, line3, rotation, scale: s }) {
+  const scaledSize = Math.round(size * s)
+  const scaledFontSize = Math.round(fontSize * s)
+  const lines = [line1, line2, line3].filter(Boolean)
+  const text = lines.join('\n')
+  const fontStyle = `${bold ? 'bold' : ''} ${italic ? 'italic' : ''}`.trim() || 'normal'
+  const half = scaledSize / 2
+
+  return (
+    <Group x={x + half} y={y + half} rotation={rotation}>
+      {shape === 'circle' && (
+        <Circle
+          x={0} y={0}
+          radius={half}
+          fill={bgColor}
+          stroke={borderWidth > 0 ? borderColor : undefined}
+          strokeWidth={borderWidth * s}
+        />
+      )}
+      {shape === 'rectangle' && (
+        <Rect
+          x={-half} y={-half}
+          width={scaledSize} height={scaledSize}
+          fill={bgColor}
+          stroke={borderWidth > 0 ? borderColor : undefined}
+          strokeWidth={borderWidth * s}
+        />
+      )}
+      {shape === 'pill' && (
+        <Rect
+          x={-half} y={-half * 0.6}
+          width={scaledSize} height={scaledSize * 0.6}
+          fill={bgColor}
+          cornerRadius={scaledSize * 0.3}
+          stroke={borderWidth > 0 ? borderColor : undefined}
+          strokeWidth={borderWidth * s}
+        />
+      )}
+      {shape === 'starburst' && (
+        <Star
+          x={0} y={0}
+          numPoints={12}
+          innerRadius={half * 0.7}
+          outerRadius={half}
+          fill={bgColor}
+          stroke={borderWidth > 0 ? borderColor : undefined}
+          strokeWidth={borderWidth * s}
+        />
+      )}
+      {text && (
+        <Text
+          text={text}
+          x={-half + 4} y={shape === 'pill' ? -half * 0.3 + 2 : -half + 4}
+          width={scaledSize - 8}
+          height={shape === 'pill' ? scaledSize * 0.6 - 4 : scaledSize - 8}
+          align={textAlign}
+          verticalAlign="middle"
+          fontSize={scaledFontSize}
+          fontFamily={fontFamily}
+          fontStyle={fontStyle}
+          fill={textColor}
+          lineHeight={1.2}
+          wrap="word"
+        />
+      )}
+    </Group>
+  )
+}
+
 export default function BannerCanvas({ format, scale = 1 }) {
   const {
     image, headline, tagline, subtext, ctaText, badge, logo, brandColor,
@@ -23,6 +92,9 @@ export default function BannerCanvas({ format, scale = 1 }) {
     ctaFont, ctaColor, ctaSize,
     activeBadgeSrc, focusPoints,
     logoPosition, logoSize, badgePosition, badgeSize,
+    badgeShape, badgeBgColor, badgeTextColor, badgeBorderColor, badgeBorderWidth,
+    badgeFontFamily, badgeFontSize: badgeFontSizeSetting, badgeBold, badgeItalic, badgeTextAlign,
+    badgeLine1, badgeLine2, badgeLine3, badgeRotation,
   } = useAppState()
 
   const formatKey = `${format.width}x${format.height}`
@@ -78,7 +150,6 @@ export default function BannerCanvas({ format, scale = 1 }) {
   const tSize = Math.round((taglineSize || 28) * s)
   const sSize = Math.round((subtextSize || 20) * s)
   const cSize = Math.round((ctaSize || 18) * s)
-  const badgeFontSize = Math.round(14 * s)
   const logoH = Math.round((logoSize || 40) * s)
   const padding = Math.round(40 * s)
   const badgeImgSize = Math.round((badgeSize || 60) * s)
@@ -87,6 +158,8 @@ export default function BannerCanvas({ format, scale = 1 }) {
   const headlineEndY = headline ? textAreaY + hSize * 1.2 + 6 : textAreaY
   const taglineEndY = tagline ? headlineEndY + tSize * 1.3 + 4 : headlineEndY
   const subtextStartY = taglineEndY + 4
+
+  const hasBadgeDesigner = badgeLine1 || badgeLine2 || badgeLine3
 
   return (
     <Stage
@@ -99,30 +172,6 @@ export default function BannerCanvas({ format, scale = 1 }) {
     >
       <Layer>
         <Rect width={width} height={height} fill="#1E1E1E" />
-
-        {/* Empty state */}
-        {!bgImage && !headline && !tagline && !subtext && !ctaText && (
-          <>
-            <Text
-              text="Drop your image to begin"
-              x={0} y={height * 0.42} width={width}
-              align="center"
-              fontSize={Math.round(24 * s)}
-              fontFamily="Playfair Display"
-              fontStyle="italic"
-              fill="#555555"
-            />
-            <Text
-              text={`${width} × ${height}`}
-              x={0} y={height * 0.42 + Math.round(36 * s)} width={width}
-              align="center"
-              fontSize={Math.round(12 * s)}
-              fontFamily="DM Mono"
-              fill="#555555"
-              opacity={0.5}
-            />
-          </>
-        )}
 
         {bgImage && crop && (
           <KonvaImage
@@ -142,26 +191,26 @@ export default function BannerCanvas({ format, scale = 1 }) {
         )}
 
         {/* Badge image from library — positioned */}
-        {badgeImage && (() => {
+        {badgeImage && !hasBadgeDesigner && (() => {
           const bh = badgeImgSize * (badgeImage.height / badgeImage.width)
           const bp = getCornerPos(badgePosition, width, height, badgeImgSize, bh, padding)
           return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSize} height={bh} />
         })()}
 
-        {/* Badge text fallback — positioned */}
-        {badge && !badgeImage && (() => {
-          const bw = Math.max(badge.length * badgeFontSize * 0.65, 60)
-          const bh = badgeFontSize * 2.2
-          const bp = getCornerPos(badgePosition, width, height, bw, bh, padding)
+        {/* Badge designer — shape-based badge */}
+        {hasBadgeDesigner && (() => {
+          const bp = getCornerPos(badgePosition, width, height, badgeImgSize, badgeImgSize, padding)
           return (
-            <Group x={bp.x} y={bp.y}>
-              <Rect width={bw} height={bh} fill={brandColor} />
-              <Text
-                text={badge} width={bw} height={bh}
-                align="center" verticalAlign="middle"
-                fontSize={badgeFontSize} fontFamily={headlineFont} fontStyle="bold" fill="#FFFFFF"
-              />
-            </Group>
+            <BadgeDesigner
+              x={bp.x} y={bp.y}
+              size={badgeSize} shape={badgeShape}
+              bgColor={badgeBgColor} textColor={badgeTextColor}
+              borderColor={badgeBorderColor} borderWidth={badgeBorderWidth}
+              fontFamily={badgeFontFamily} fontSize={badgeFontSizeSetting}
+              bold={badgeBold} italic={badgeItalic} textAlign={badgeTextAlign}
+              line1={badgeLine1} line2={badgeLine2} line3={badgeLine3}
+              rotation={badgeRotation} scale={s}
+            />
           )
         })()}
 

@@ -1,16 +1,24 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { useAppState, useAppDispatch } from '../store/AppContext'
 import { AD_FORMATS } from '../utils/formats'
+import { getImageLuminance } from '../utils/luminance'
 import BannerCanvas from './BannerCanvas'
+import EditModeBannerCanvas from './EditModeBannerCanvas'
+
+const MIN_DIMENSION = 1000
 
 // Group formats by platform for the tab bar
 const PLATFORMS = [...new Set(AD_FORMATS.map(f => f.platform))]
 
 export default function CenterCanvas() {
-  const { selectedFormat, image } = useAppState()
+  const state = useAppState()
+  const { selectedFormat, image, editingFormat } = state
   const dispatch = useAppDispatch()
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 })
   const [activePlatform, setActivePlatform] = useState('instagram')
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [savedState, setSavedState] = useState(null)
+  const fileInputRef = useRef(null)
 
   const platformFormats = useMemo(() => {
     return AD_FORMATS.filter(f => f.platform === activePlatform)
@@ -23,6 +31,8 @@ export default function CenterCanvas() {
     }
     return platformFormats[0] || AD_FORMATS[0]
   }, [selectedFormat, platformFormats])
+
+  const isEditMode = editingFormat === format.id
 
   // Sync active platform when format changes
   useEffect(() => {
@@ -41,28 +51,114 @@ export default function CenterCanvas() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Smart scaling: fill center, min 400px shortest side
+  // Smart scaling
   const margin = 40
   const tabBarHeight = 120
+  const editBarHeight = isEditMode ? 36 : 0
   const availW = containerSize.width - margin * 2
-  const availH = containerSize.height - tabBarHeight - margin * 2
+  const availH = containerSize.height - tabBarHeight - margin * 2 - editBarHeight
 
   const scaleW = availW / format.width
   const scaleH = availH / format.height
-  // Use the smaller scale to fit within container, allow scaling UP
   let scale = Math.min(scaleW, scaleH)
-  // Ensure minimum 400px on shortest display side
   const shortestSide = Math.min(format.width, format.height) * scale
   if (shortestSide < 400 && Math.min(format.width, format.height) > 0) {
     const minScale = 400 / Math.min(format.width, format.height)
     scale = Math.max(scale, minScale)
   }
-  // But don't overflow the container
   scale = Math.min(scale, scaleW, scaleH)
 
-  const handleEditFormat = () => {
+  // Image upload handlers
+  const processFile = useCallback((file) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        if (img.width < MIN_DIMENSION || img.height < MIN_DIMENSION) {
+          dispatch({ type: 'ADD_TOAST', payload: { message: `Image must be at least ${MIN_DIMENSION}x${MIN_DIMENSION}px`, variant: 'error' } })
+          return
+        }
+        const luminance = getImageLuminance(img)
+        dispatch({
+          type: 'SET_IMAGE',
+          payload: { src: reader.result, name: file.name, width: img.width, height: img.height, luminance },
+        })
+        const formatKeys = AD_FORMATS.map(f => `${f.width}x${f.height}`)
+        dispatch({ type: 'INIT_FOCUS_POINTS', payload: formatKeys })
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Loaded: ${file.name}`, variant: 'success' } })
+      }
+      img.src = reader.result
+    }
+    reader.readAsDataURL(file)
+  }, [dispatch])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const file = e.dataTransfer?.files?.[0]
+    if (file && /\.(png|jpe?g|webp)$/i.test(file.name)) {
+      processFile(file)
+    }
+  }, [processFile])
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    setIsDragOver(false)
+  }, [])
+
+  const handleCanvasClick = useCallback(() => {
+    if (!image) {
+      fileInputRef.current?.click()
+    }
+  }, [image])
+
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0]
+    if (file) processFile(file)
+    e.target.value = ''
+  }, [processFile])
+
+  const handleRemoveImage = useCallback((e) => {
+    e.stopPropagation()
+    dispatch({ type: 'CLEAR_IMAGE' })
+  }, [dispatch])
+
+  // Edit mode handlers
+  const handleEnterEditMode = useCallback(() => {
+    // Save snapshot for cancel
+    const { history, historyIndex, toasts, isExporting, exportProgress, exportCancelled, showDesignPolice, designIssues, showExportModal, ...snap } = state
+    setSavedState(snap)
     dispatch({ type: 'SET_EDITING_FORMAT', payload: format.id })
-  }
+  }, [state, dispatch, format])
+
+  const handleSave = useCallback(() => {
+    dispatch({ type: 'SET_EDITING_FORMAT', payload: null })
+    setSavedState(null)
+    dispatch({ type: 'ADD_TOAST', payload: { message: 'Changes saved', variant: 'success' } })
+  }, [dispatch])
+
+  const handleCancel = useCallback(() => {
+    if (savedState) {
+      dispatch({ type: 'RESTORE_STATE', payload: savedState })
+    }
+    dispatch({ type: 'SET_EDITING_FORMAT', payload: null })
+    setSavedState(null)
+  }, [savedState, dispatch])
+
+  // Escape key to exit edit mode
+  useEffect(() => {
+    if (!isEditMode) return
+    const handler = (e) => {
+      if (e.key === 'Escape') handleCancel()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isEditMode, handleCancel])
 
   return (
     <main
@@ -70,7 +166,19 @@ export default function CenterCanvas() {
       className="flex-1 flex flex-col items-center justify-center dot-grid min-h-0 overflow-hidden"
       style={{ background: '#F0F0EC' }}
       aria-label="Banner preview area"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
     >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".png,.jpg,.jpeg,.webp"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+
       {/* Platform tabs */}
       <div className="flex gap-4 mb-3">
         {PLATFORMS.map(p => (
@@ -113,32 +221,84 @@ export default function CenterCanvas() {
         ))}
       </nav>
 
-      {/* Format indicator label — outside canvas */}
-      <div className="mb-2">
-        <span
-          className="inline-block px-3 py-1 font-mono uppercase tracking-[0.08em]"
+      {/* Edit mode bar */}
+      {isEditMode && (
+        <div
+          className="flex items-center justify-between w-full px-6 mb-2"
           style={{
-            fontSize: '11px',
-            color: '#555555',
-            background: '#FFFFFF',
-            border: '1px solid #E0E0DC',
+            height: '36px',
+            background: '#FAFAF8',
+            borderBottom: '1px solid #E0E0DC',
+            maxWidth: `${format.width * scale + 40}px`,
           }}
         >
-          {format.name}
-        </span>
-      </div>
+          <span className="text-[11px] font-mono text-secondary">
+            EDIT MODE — double-click text to edit, drag to reposition
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancel}
+              className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="text-[11px] font-mono px-3 py-1 bg-ink text-bg cursor-pointer hover:bg-bg hover:text-ink transition-all"
+              style={{ border: '1px solid #0A0A0A' }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Canvas — floating in space, clean render only */}
+      {/* Canvas */}
       <div
-        style={{ boxShadow: '0 4px 40px rgba(0,0,0,0.06)', cursor: 'pointer' }}
-        onDoubleClick={handleEditFormat}
-        title="Double-click to edit"
+        style={{
+          boxShadow: '0 4px 40px rgba(0,0,0,0.06)',
+          cursor: !image ? 'pointer' : isEditMode ? 'default' : 'pointer',
+          outline: isEditMode ? '2px solid #00C4FF' : isDragOver ? '2px dashed #00C4FF' : 'none',
+          outlineOffset: '2px',
+          position: 'relative',
+        }}
+        onClick={!image ? handleCanvasClick : undefined}
+        onDoubleClick={!isEditMode && image ? handleEnterEditMode : undefined}
+        title={!image ? 'Click to upload image' : isEditMode ? '' : 'Double-click to edit'}
       >
-        <BannerCanvas format={format} scale={scale} />
+        {/* Empty state overlay for drop */}
+        {!image && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <p style={{
+              fontFamily: "'Playfair Display', serif",
+              fontSize: '20px',
+              color: '#9A9A9A',
+              fontStyle: 'italic',
+            }}>
+              Drop image here
+            </p>
+          </div>
+        )}
+
+        {isEditMode ? (
+          <EditModeBannerCanvas format={format} scale={scale} />
+        ) : (
+          <BannerCanvas format={format} scale={scale} />
+        )}
       </div>
 
-      {/* Format label */}
-      <div className="mt-4 text-center">
+      {/* Below canvas: format label + remove link */}
+      <div className="mt-4 text-center" style={{ position: 'relative' }}>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: 500, color: '#0A0A0A' }}>
           {format.name}
         </p>
@@ -146,14 +306,33 @@ export default function CenterCanvas() {
           {format.width} &times; {format.height}
           {image && ` / ${Math.round(scale * 100)}%`}
         </p>
-        <button
-          onClick={handleEditFormat}
-          className="hover:underline bg-transparent border-none cursor-pointer mt-1"
-          style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#0A0A0A' }}
-        >
-          Edit in canvas
-        </button>
+        {!isEditMode && (
+          <button
+            onClick={handleEnterEditMode}
+            className="hover:underline bg-transparent border-none cursor-pointer mt-1"
+            style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#0A0A0A' }}
+          >
+            Edit in canvas
+          </button>
+        )}
       </div>
+
+      {/* Remove image link — bottom-left of canvas */}
+      {image && !isEditMode && (
+        <div style={{ position: 'absolute', bottom: '20px', left: '20px' }}>
+          <button
+            onClick={handleRemoveImage}
+            className="bg-transparent border-none cursor-pointer p-0 hover:text-ink"
+            style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: '11px',
+              color: '#9A9A9A',
+            }}
+          >
+            × Remove
+          </button>
+        </div>
+      )}
     </main>
   )
 }
