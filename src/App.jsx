@@ -18,24 +18,24 @@ function MobileView() {
   return (
     <div className="md:hidden flex flex-col h-screen pb-12 bg-bg">
       {activeTab === 'controls' && (
-        <div className="flex-1 overflow-y-auto px-6 py-10 space-y-12">
+        <div className="flex-1 overflow-y-auto px-3 py-5 space-y-5">
           <header className="space-y-0.5">
-            <p className="font-editorial text-[15px] uppercase tracking-[0.12em] leading-none text-ink">
+            <p className="font-editorial text-[12px] uppercase tracking-[0.12em] leading-none text-ink">
               Banner Studio
             </p>
-            <p className="font-editorial text-[11px] uppercase tracking-[0.12em] leading-none text-secondary">
+            <p className="font-editorial text-[9px] uppercase tracking-[0.12em] leading-none text-secondary">
               SharkNinja
             </p>
           </header>
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
           <ImageUpload />
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
           <FontManager />
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
           <TextInputs />
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
           <BadgeLibrary />
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
           <BrandSettings />
         </div>
       )}
@@ -45,7 +45,7 @@ function MobileView() {
         </div>
       )}
       {activeTab === 'export' && (
-        <div className="flex-1 overflow-y-auto px-6 py-10">
+        <div className="flex-1 overflow-y-auto px-3 py-5">
           <ExportPanel />
         </div>
       )}

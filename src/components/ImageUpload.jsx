@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useAppState, useAppDispatch } from '../store/AppContext'
 import { getImageLuminance } from '../utils/luminance'
+import FocusPointSelector from './FocusPointSelector'
 
 export default function ImageUpload() {
   const { image } = useAppState()
@@ -41,8 +42,8 @@ export default function ImageUpload() {
   })
 
   return (
-    <div className="space-y-4">
-      <h3 className="font-editorial text-[18px] text-ink">
+    <div className="space-y-2">
+      <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink">
         Image
       </h3>
       <div
@@ -53,33 +54,29 @@ export default function ImageUpload() {
       >
         <input {...getInputProps()} aria-label="File input for background image" />
         {image ? (
-          <div className="space-y-3">
-            <img
-              src={image.src}
-              alt="Uploaded preview"
-              className="w-full h-32 object-cover"
-            />
-            <p className="text-[11px] font-mono text-secondary truncate">{image.name}</p>
-            <p className="text-[10px] font-mono text-secondary">
+          <div className="space-y-1">
+            <p className="text-[10px] font-mono text-secondary truncate">{image.name}</p>
+            <p className="text-[9px] font-mono text-secondary">
               {image.width} &times; {image.height}
             </p>
           </div>
         ) : (
-          <div className="py-10 text-center" style={{ border: '1px dashed #E0E0DC' }}>
-            <p className="font-editorial text-[14px] italic text-secondary">
+          <div className="py-6 text-center" style={{ border: '1px dashed #E0E0DC' }}>
+            <p className="text-[10px] font-mono text-secondary">
               {isDragActive ? 'Drop here' : 'Drop image or click'}
             </p>
-            <p className="text-[10px] font-mono text-secondary mt-2">PNG, JPG, WEBP</p>
+            <p className="text-[9px] font-mono text-secondary mt-1">PNG, JPG, WEBP</p>
           </div>
         )}
       </div>
+      {image && <FocusPointSelector />}
       {image && (
         <button
           onClick={(e) => {
             e.stopPropagation()
             dispatch({ type: 'CLEAR_IMAGE' })
           }}
-          className="text-[11px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+          className="text-[10px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Remove uploaded image"
         >
           Remove

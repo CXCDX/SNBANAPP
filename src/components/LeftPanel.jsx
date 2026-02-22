@@ -7,39 +7,39 @@ import FontManager from './FontManager'
 export default function LeftPanel() {
   return (
     <div className="flex h-full shrink-0" aria-label="Controls panel">
-      {/* Black sidebar — silent power */}
+      {/* Black sidebar */}
       <div className="w-10 bg-sidebar shrink-0" />
 
-      {/* Controls — pure white, zero noise */}
-      <aside className="w-[220px] shrink-0 bg-surface overflow-y-auto" style={{ borderRight: '0.5px solid #E0E0DC' }}>
-        <div className="px-6 pt-10 pb-16 space-y-12">
+      {/* Controls */}
+      <aside className="w-[200px] shrink-0 bg-surface overflow-y-auto" style={{ borderRight: '0.5px solid #E0E0DC' }}>
+        <div className="px-3 pt-5 pb-8 space-y-5">
           {/* Masthead */}
           <header className="space-y-0.5">
-            <p className="font-editorial text-[15px] uppercase tracking-[0.12em] leading-none text-ink">
+            <p className="font-editorial text-[12px] uppercase tracking-[0.12em] leading-none text-ink">
               Banner Studio
             </p>
-            <p className="font-editorial text-[11px] uppercase tracking-[0.12em] leading-none text-secondary">
+            <p className="font-editorial text-[9px] uppercase tracking-[0.12em] leading-none text-secondary">
               SharkNinja
             </p>
           </header>
 
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
 
           <ImageUpload />
 
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
 
           <FontManager />
 
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
 
           <TextInputs />
 
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
 
           <BadgeLibrary />
 
-          <div className="h-px bg-ink" />
+          <div className="h-px bg-border" />
 
           <BrandSettings />
         </div>

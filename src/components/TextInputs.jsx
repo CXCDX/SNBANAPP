@@ -9,8 +9,8 @@ function FontSelect({ field, value }) {
     <select
       value={value}
       onChange={(e) => dispatch({ type: 'SET_FIELD_FONT', payload: { field, font: e.target.value } })}
-      className="w-full bg-transparent border-none text-[10px] font-mono text-secondary cursor-pointer p-0 focus:outline-none"
-      style={{ borderBottom: '1px solid #E0E0DC', paddingBottom: '2px' }}
+      className="w-full bg-transparent border-none text-[9px] font-mono text-secondary cursor-pointer p-0 focus:outline-none"
+      style={{ borderBottom: '1px solid #E0E0DC', paddingBottom: '1px' }}
       aria-label={`Font for ${field}`}
     >
       {allFonts.map((f) => (
@@ -26,21 +26,21 @@ function ColorPicker({ field, value, autoColor }) {
   const isAuto = !value
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <input
         type="color"
         value={displayColor}
         onChange={(e) => dispatch({ type: 'SET_FIELD_COLOR', payload: { field, color: e.target.value } })}
-        className="w-5 h-5"
+        className="w-4 h-4"
         aria-label={`Color for ${field}`}
       />
-      <span className="text-[9px] font-mono text-secondary">
+      <span className="text-[8px] font-mono text-secondary">
         {isAuto ? 'auto' : value}
       </span>
       {!isAuto && (
         <button
           onClick={() => dispatch({ type: 'SET_FIELD_COLOR', payload: { field, color: '' } })}
-          className="text-[9px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
+          className="text-[8px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0"
           aria-label="Reset to auto color"
         >
           reset
@@ -55,13 +55,13 @@ function CharInput({ label, field, value, onChange, maxLength, placeholder, font
   const counterColor = atLimit ? 'text-danger' : 'text-secondary'
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <div className="flex justify-between items-baseline">
-        <label className="font-editorial text-[14px] italic text-ink">
+        <label className="text-[10px] font-mono text-ink">
           {label}
         </label>
         {maxLength && (
-          <span className={`text-[10px] font-mono tabular-nums ${counterColor} transition-colors`}>
+          <span className={`text-[9px] font-mono tabular-nums ${counterColor} transition-colors`}>
             {value.length}/{maxLength}
           </span>
         )}
@@ -73,9 +73,10 @@ function CharInput({ label, field, value, onChange, maxLength, placeholder, font
         maxLength={maxLength}
         placeholder={placeholder}
         className="input-editorial"
+        style={{ fontSize: '13px', padding: '4px 0' }}
         aria-label={label}
       />
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <div className="flex-1">
           <FontSelect field={field} value={font} />
         </div>
@@ -90,8 +91,8 @@ export default function TextInputs() {
   const dispatch = useAppDispatch()
 
   return (
-    <div className="space-y-7">
-      <h3 className="font-editorial text-[18px] text-ink">
+    <div className="space-y-3">
+      <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink">
         Text
       </h3>
       <CharInput

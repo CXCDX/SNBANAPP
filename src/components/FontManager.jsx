@@ -28,13 +28,13 @@ export default function FontManager() {
   }, [dispatch])
 
   return (
-    <div className="space-y-5">
-      <h3 className="font-editorial text-[18px] text-ink">
+    <div className="space-y-2">
+      <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink">
         Fonts
       </h3>
 
       <label className="block cursor-pointer">
-        <span className="text-[11px] font-mono text-secondary hover:underline">Upload TTF / OTF / WOFF</span>
+        <span className="text-[10px] font-mono text-secondary hover:underline">Upload TTF / OTF / WOFF</span>
         <input
           type="file"
           accept=".ttf,.otf,.woff,.woff2"
@@ -45,19 +45,19 @@ export default function FontManager() {
       </label>
 
       {customFonts.length > 0 && (
-        <div className="space-y-2">
-          <p className="font-editorial text-[13px] italic text-secondary">Uploaded</p>
+        <div className="space-y-1">
+          <p className="text-[9px] font-mono text-secondary">Uploaded</p>
           {customFonts.map((font) => (
-            <div key={font.name} className="flex items-center justify-between gap-2">
+            <div key={font.name} className="flex items-center justify-between gap-1">
               <span
-                className="text-[12px] text-ink truncate"
+                className="text-[10px] text-ink truncate"
                 style={{ fontFamily: `"${font.name}", sans-serif` }}
               >
                 {font.name}
               </span>
               <button
                 onClick={() => dispatch({ type: 'REMOVE_CUSTOM_FONT', payload: font.name })}
-                className="text-[10px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0 shrink-0"
+                className="text-[9px] font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer p-0 shrink-0"
                 aria-label={`Remove font ${font.name}`}
               >
                 Remove

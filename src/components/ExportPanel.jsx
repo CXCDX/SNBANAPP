@@ -61,7 +61,7 @@ export default function ExportPanel() {
         ctx.fillRect(0, 0, format.width, format.height)
 
         if (bgImg) {
-          const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height)
+          const crop = getCenterCrop(bgImg.width, bgImg.height, format.width, format.height, state.focusPoint)
           ctx.drawImage(bgImg, crop.sx, crop.sy, crop.sWidth, crop.sHeight, 0, 0, format.width, format.height)
 
           const gradient = ctx.createLinearGradient(0, format.height * 0.3, 0, format.height)
@@ -170,15 +170,15 @@ export default function ExportPanel() {
   }, [enabledFormats, state, dispatch])
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-5">
       <div>
-        <h3 className="font-editorial text-[18px] text-ink mb-6">
+        <h3 className="font-editorial text-[11px] uppercase tracking-[0.08em] text-ink mb-3">
           Formats
         </h3>
         <FormatChecklist enabledFormats={enabledFormats} onToggle={toggleFormat} />
       </div>
 
-      <div className="flex gap-3 text-[11px] font-mono">
+      <div className="flex gap-2 text-[10px] font-mono">
         <button
           onClick={selectAll}
           className="text-ink hover:underline bg-transparent border-none cursor-pointer p-0"
@@ -199,7 +199,7 @@ export default function ExportPanel() {
       <button
         onClick={handleExport}
         disabled={state.isExporting || enabledFormats.length === 0}
-        className="w-full py-3.5 px-4 text-[11px] font-mono uppercase tracking-[0.15em]
+        className="w-full py-2.5 px-3 text-[10px] font-mono uppercase tracking-[0.15em]
           bg-ink text-bg
           hover:bg-bg hover:text-ink
           disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-ink disabled:hover:text-bg

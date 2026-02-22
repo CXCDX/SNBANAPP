@@ -16,6 +16,7 @@ const DEFAULT_FONTS = [
 const initialState = {
   // Image
   image: null,
+  focusPoint: { x: 0.5, y: 0.5 },
   // Text content
   headline: '',
   tagline: '',
@@ -52,7 +53,9 @@ function appReducer(state, action) {
     case 'SET_IMAGE':
       return { ...state, image: action.payload }
     case 'CLEAR_IMAGE':
-      return { ...state, image: null }
+      return { ...state, image: null, focusPoint: { x: 0.5, y: 0.5 } }
+    case 'SET_FOCUS_POINT':
+      return { ...state, focusPoint: action.payload }
     case 'SET_HEADLINE':
       return { ...state, headline: action.payload.slice(0, 30) }
     case 'SET_TAGLINE':

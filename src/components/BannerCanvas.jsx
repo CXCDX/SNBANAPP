@@ -9,7 +9,7 @@ export default function BannerCanvas({ format, scale = 1 }) {
     image, headline, tagline, subtext, ctaText, badge, logo, brandColor,
     headlineFont, headlineColor, taglineFont, taglineColor,
     subtextFont, subtextColor, ctaFont, ctaColor,
-    activeBadgeSrc,
+    activeBadgeSrc, focusPoint,
   } = useAppState()
   const stageRef = useRef(null)
   const [bgImage, setBgImage] = useState(null)
@@ -54,8 +54,8 @@ export default function BannerCanvas({ format, scale = 1 }) {
 
   const crop = useMemo(() => {
     if (!bgImage) return null
-    return getCenterCrop(bgImage.width, bgImage.height, width, height)
-  }, [bgImage, width, height])
+    return getCenterCrop(bgImage.width, bgImage.height, width, height, focusPoint)
+  }, [bgImage, width, height, focusPoint])
 
   const s = Math.min(width, height) / 1080
   const headlineSize = Math.round(48 * s)
