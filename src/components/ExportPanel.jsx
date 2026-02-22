@@ -112,44 +112,13 @@ export default function ExportPanel() {
   }, [])
 
   const handleExport = useCallback(() => {
-    // Run design police checks first
-    const formats = AD_FORMATS.filter(f => enabledFormats.includes(f.id))
-    if (formats.length === 0) {
+    if (enabledFormats.length === 0) {
       dispatch({ type: 'ADD_TOAST', payload: { message: 'Select at least one format', variant: 'error' } })
       return
     }
-
-    // Run checks using first selected format
-    const format = formats[0]
-    let canvas = null
-    try {
-      // Quick render for checks
-      const bgImg = null // Skip image loading for quick check
-      canvas = renderCanvas({
-        format, state,
-        bgImg: null, logoImg: null, badgeImg: null,
-        autoColor: '#F5F5F5',
-        overlayGradient: getOverlayGradient('light'),
-        hFont: fontStr(state.headlineFont),
-        tFont: fontStr(state.taglineFont),
-        sFont: fontStr(state.subtextFont),
-        cFont: fontStr(state.ctaFont),
-      })
-    } catch {}
-
-    const issues = runDesignChecks(state, canvas, format)
-    const hasErrors = issues.some(i => i.level === 'error')
-    const hasWarnings = issues.some(i => i.level === 'warning')
-
-    if (!hasErrors && !hasWarnings) {
-      // All green → export directly
-      doExport()
-    } else {
-      // Show design police modal
-      dispatch({ type: 'SET_DESIGN_ISSUES', payload: issues })
-      dispatch({ type: 'SET_SHOW_DESIGN_POLICE', payload: true })
-    }
-  }, [enabledFormats, state, dispatch, doExport])
+    // Open export modal
+    dispatch({ type: 'SET_SHOW_EXPORT_MODAL', payload: true })
+  }, [enabledFormats, dispatch])
 
   return (
     <div className="space-y-5">
@@ -278,7 +247,7 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
   const ctaFontSize = Math.round((state.ctaSize || 18) * sc)
   const badgeFontSize = Math.round(14 * sc)
   const logoHeight = Math.round((state.logoSize || 40) * sc)
-  const badgeImgSize = Math.round(60 * sc)
+  const badgeImgSize = Math.round((state.badgeSize || 60) * sc)
   const textAreaY = format.height * 0.50
 
   // Logo — positioned

@@ -11,7 +11,7 @@ const POSITIONS = [
 ]
 
 export default function BadgeLibrary() {
-  const { badgeLibrary, activeBadgeSrc, badgePosition } = useAppState()
+  const { badgeLibrary, activeBadgeSrc, badgePosition, badgeSize } = useAppState()
   const dispatch = useAppDispatch()
   const [badgeName, setBadgeName] = useState('')
   const [pendingFile, setPendingFile] = useState(null)
@@ -132,6 +132,24 @@ export default function BadgeLibrary() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Size slider */}
+      <div className="space-y-1">
+        <div className="flex justify-between">
+          <p className="text-[11px] font-mono text-secondary">Size</p>
+          <p className="text-[11px] font-mono text-secondary">{badgeSize}px</p>
+        </div>
+        <input
+          type="range"
+          min="40"
+          max="200"
+          value={badgeSize}
+          onChange={(e) => dispatch({ type: 'SET_BADGE_SIZE', payload: Number(e.target.value) })}
+          className="w-full h-1 appearance-none bg-border cursor-pointer"
+          style={{ accentColor: '#0A0A0A' }}
+          aria-label="Badge size"
+        />
       </div>
 
       {/* Library grid */}

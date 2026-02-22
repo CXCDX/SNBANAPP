@@ -113,7 +113,22 @@ export default function CenterCanvas() {
         ))}
       </nav>
 
-      {/* Canvas — floating in space */}
+      {/* Format indicator label — outside canvas */}
+      <div className="mb-2">
+        <span
+          className="inline-block px-3 py-1 font-mono uppercase tracking-[0.08em]"
+          style={{
+            fontSize: '11px',
+            color: '#555555',
+            background: '#FFFFFF',
+            border: '1px solid #E0E0DC',
+          }}
+        >
+          {format.name}
+        </span>
+      </div>
+
+      {/* Canvas — floating in space, clean render only */}
       <div
         style={{ boxShadow: '0 4px 40px rgba(0,0,0,0.06)', cursor: 'pointer' }}
         onDoubleClick={handleEditFormat}
@@ -124,15 +139,17 @@ export default function CenterCanvas() {
 
       {/* Format label */}
       <div className="mt-4 text-center">
-        <p className="font-mono text-ink" style={{ fontSize: '11px' }}>{format.name}</p>
-        <p className="font-mono text-secondary mt-0.5" style={{ fontSize: '11px' }}>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: 500, color: '#0A0A0A' }}>
+          {format.name}
+        </p>
+        <p className="font-mono mt-0.5" style={{ fontSize: '12px', color: '#555555' }}>
           {format.width} &times; {format.height}
           {image && ` / ${Math.round(scale * 100)}%`}
         </p>
         <button
           onClick={handleEditFormat}
-          className="font-mono text-secondary hover:underline bg-transparent border-none cursor-pointer mt-1"
-          style={{ fontSize: '11px' }}
+          className="hover:underline bg-transparent border-none cursor-pointer mt-1"
+          style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '12px', color: '#0A0A0A' }}
         >
           Edit in canvas
         </button>

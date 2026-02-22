@@ -279,7 +279,7 @@ function renderBanner({ format, row, state, bgImg, logoImg, badgeImg, autoColor,
   const ctaFontSize = Math.round((state.ctaSize || 18) * sc)
   const badgeFontSize = Math.round(14 * sc)
   const logoHeight = Math.round((state.logoSize || 40) * sc)
-  const badgeImgSize = Math.round(60 * sc)
+  const badgeImgSize = Math.round((state.badgeSize || 60) * sc)
   const textAreaY = format.height * 0.50
 
   const hFont = fontStr(state.headlineFont)

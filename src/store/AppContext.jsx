@@ -54,6 +54,7 @@ const initialState = {
   badgeLibrary: [],
   activeBadgeSrc: null,
   badgePosition: persisted.badgePosition || 'top-right',
+  badgeSize: persisted.badgeSize || 60,
   // Custom fonts
   customFonts: [],
   // CSV
@@ -67,6 +68,7 @@ const initialState = {
   // Design police
   designIssues: [],
   showDesignPolice: false,
+  showExportModal: false,
   // UI
   selectedFormat: null,
   expandedFormat: null,
@@ -85,7 +87,7 @@ const UNDOABLE_ACTIONS = new Set([
   'SET_HEADLINE', 'SET_TAGLINE', 'SET_SUBTEXT', 'SET_CTA', 'SET_BADGE',
   'SET_FIELD_FONT', 'SET_FIELD_COLOR', 'SET_FIELD_SIZE',
   'SET_LOGO', 'SET_LOGO_TYPE', 'SET_LOGO_POSITION', 'SET_LOGO_SIZE',
-  'SET_BRAND_COLOR', 'SET_ACTIVE_BADGE', 'CLEAR_ACTIVE_BADGE', 'SET_BADGE_POSITION',
+  'SET_BRAND_COLOR', 'SET_ACTIVE_BADGE', 'CLEAR_ACTIVE_BADGE', 'SET_BADGE_POSITION', 'SET_BADGE_SIZE',
   'SET_TEXT_POSITION',
 ])
 
@@ -95,7 +97,7 @@ const PERSIST_KEYS = [
   'subtextFont', 'subtextColor', 'subtextSize',
   'ctaFont', 'ctaColor', 'ctaSize',
   'logoType', 'logoPosition', 'logoSize', 'brandColor',
-  'badgePosition', 'exportQuality',
+  'badgePosition', 'badgeSize', 'exportQuality',
 ]
 
 function pushHistory(state) {
@@ -189,6 +191,8 @@ function coreReducer(state, action) {
       return { ...state, activeBadgeSrc: null }
     case 'SET_BADGE_POSITION':
       return { ...state, badgePosition: action.payload }
+    case 'SET_BADGE_SIZE':
+      return { ...state, badgeSize: action.payload }
     case 'ADD_CUSTOM_FONT':
       return { ...state, customFonts: [...state.customFonts, action.payload] }
     case 'REMOVE_CUSTOM_FONT':
@@ -218,6 +222,8 @@ function coreReducer(state, action) {
       return { ...state, designIssues: action.payload }
     case 'SET_SHOW_DESIGN_POLICE':
       return { ...state, showDesignPolice: action.payload }
+    case 'SET_SHOW_EXPORT_MODAL':
+      return { ...state, showExportModal: action.payload }
     case 'SET_SELECTED_FORMAT':
       return { ...state, selectedFormat: action.payload }
     case 'SET_EXPANDED_FORMAT':
@@ -252,7 +258,7 @@ export function AppProvider({ children }) {
       state.subtextFont, state.subtextColor, state.subtextSize,
       state.ctaFont, state.ctaColor, state.ctaSize,
       state.logoType, state.logoPosition, state.logoSize, state.brandColor,
-      state.badgePosition, state.exportQuality])
+      state.badgePosition, state.badgeSize, state.exportQuality])
 
   // Undo/Redo keyboard shortcuts
   useEffect(() => {

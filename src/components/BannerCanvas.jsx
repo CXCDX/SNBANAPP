@@ -22,7 +22,7 @@ export default function BannerCanvas({ format, scale = 1 }) {
     subtextFont, subtextColor, subtextSize,
     ctaFont, ctaColor, ctaSize,
     activeBadgeSrc, focusPoints,
-    logoPosition, logoSize, badgePosition,
+    logoPosition, logoSize, badgePosition, badgeSize,
   } = useAppState()
 
   const formatKey = `${format.width}x${format.height}`
@@ -81,7 +81,7 @@ export default function BannerCanvas({ format, scale = 1 }) {
   const badgeFontSize = Math.round(14 * s)
   const logoH = Math.round((logoSize || 40) * s)
   const padding = Math.round(40 * s)
-  const badgeImgSize = Math.round(60 * s)
+  const badgeImgSize = Math.round((badgeSize || 60) * s)
   const textAreaY = height * 0.50
 
   const headlineEndY = headline ? textAreaY + hSize * 1.2 + 6 : textAreaY
@@ -99,6 +99,30 @@ export default function BannerCanvas({ format, scale = 1 }) {
     >
       <Layer>
         <Rect width={width} height={height} fill="#1E1E1E" />
+
+        {/* Empty state */}
+        {!bgImage && !headline && !tagline && !subtext && !ctaText && (
+          <>
+            <Text
+              text="Drop your image to begin"
+              x={0} y={height * 0.42} width={width}
+              align="center"
+              fontSize={Math.round(24 * s)}
+              fontFamily="Playfair Display"
+              fontStyle="italic"
+              fill="#555555"
+            />
+            <Text
+              text={`${width} × ${height}`}
+              x={0} y={height * 0.42 + Math.round(36 * s)} width={width}
+              align="center"
+              fontSize={Math.round(12 * s)}
+              fontFamily="DM Mono"
+              fill="#555555"
+              opacity={0.5}
+            />
+          </>
+        )}
 
         {bgImage && crop && (
           <KonvaImage

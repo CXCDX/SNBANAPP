@@ -25,3 +25,7 @@ export function getPlatformFolder(platform) {
   }
   return map[platform] || 'Other'
 }
+
+export function getFormatFolder(format) {
+  return format.name.toLowerCase().replace(/[/\s]+/g, '_')
+}

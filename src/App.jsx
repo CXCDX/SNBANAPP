@@ -15,6 +15,7 @@ import BadgeLibrary from './components/BadgeLibrary'
 import FontManager from './components/FontManager'
 import CsvBulkUpload from './components/CsvBulkUpload'
 import ExportPanel from './components/ExportPanel'
+import ExportModal from './components/ExportModal'
 
 function MobileView() {
   const { activeTab } = useAppState()
@@ -88,6 +89,7 @@ export default function App() {
       <MobileView />
       <ExpandedPreview />
       {editingFormat && <InlineEditor />}
+      <ExportModal />
       <DesignPoliceModal onExportAnyway={handleExportAnyway} />
       <ToastContainer />
     </>
