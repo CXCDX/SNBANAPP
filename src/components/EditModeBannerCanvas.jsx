@@ -262,7 +262,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
             const text = lines.join('\n')
             const fontStyle = `${badgeBold ? 'bold' : ''} ${badgeItalic ? 'italic' : ''}`.trim() || 'normal'
             return (
-              <Group x={bp.x + half} y={bp.y + half} rotation={badgeRotation}>
+              <Group x={bp.x + half} y={bp.y + half} rotation={badgeRotation} onClick={(e) => { e.cancelBubble = true; setSelectedId('badge') }}>
                 {badgeShape === 'circle' && (
                   <Circle radius={half} fill={badgeBgColor} stroke={badgeBorderWidth > 0 ? badgeBorderColor : undefined} strokeWidth={badgeBorderWidth * s} />
                 )}
@@ -294,7 +294,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
           {!showBadge && badgeImage && (() => {
             const bh = badgeImgSz * (badgeImage.height / badgeImage.width)
             const bp = getCornerPos(badgePosition, width, height, badgeImgSz, bh, pad)
-            return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSz} height={bh} />
+            return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSz} height={bh} onClick={(e) => { e.cancelBubble = true; setSelectedId('badge') }} />
           })()}
 
           {/* Old badge text fallback */}
@@ -304,7 +304,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
             const bh = bfz * 2.2
             const bp = getCornerPos(badgePosition, width, height, bw, bh, pad)
             return (
-              <Group x={bp.x} y={bp.y}>
+              <Group x={bp.x} y={bp.y} onClick={(e) => { e.cancelBubble = true; setSelectedId('badge') }}>
                 <Rect width={bw} height={bh} fill={brandColor} />
                 <Text text={badge} width={bw} height={bh} align="center" verticalAlign="middle" fontSize={bfz} fontFamily={headlineFont} fontStyle="bold" fill="#FFFFFF" />
               </Group>
@@ -428,6 +428,68 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
           {selRect && (
             <SelectionHandles x={selRect.x} y={selRect.y} w={selRect.w} h={selRect.h} />
           )}
+
+          {/* Badge resize handles */}
+          {selectedId === 'badge' && (() => {
+            const hasBadge = showBadge || badgeImage || (badge && !badgeImage)
+            if (!hasBadge) return null
+
+            let bx, by, bw, bh
+            if (showBadge) {
+              const sz = Math.round((badgeSize || 60) * s)
+              const bp = getCornerPos(badgePosition, width, height, sz, sz, pad)
+              bx = bp.x; by = bp.y; bw = sz; bh = sz
+            } else if (badgeImage) {
+              const bh2 = badgeImgSz * (badgeImage.height / badgeImage.width)
+              const bp = getCornerPos(badgePosition, width, height, badgeImgSz, bh2, pad)
+              bx = bp.x; by = bp.y; bw = badgeImgSz; bh = bh2
+            } else {
+              const bfz = Math.round(14 * s)
+              const bw2 = Math.max(badge.length * bfz * 0.65, 60)
+              const bh2 = bfz * 2.2
+              const bp = getCornerPos(badgePosition, width, height, bw2, bh2, pad)
+              bx = bp.x; by = bp.y; bw = bw2; bh = bh2
+            }
+
+            const hsz = 8
+            const centerX = bx + bw / 2
+            const centerY = by + bh / 2
+            const corners = [
+              { cx: bx, cy: by },
+              { cx: bx + bw, cy: by },
+              { cx: bx, cy: by + bh },
+              { cx: bx + bw, cy: by + bh },
+            ]
+
+            const handleResize = (e) => {
+              const node = e.target
+              const nx = node.x() + hsz / 2
+              const ny = node.y() + hsz / 2
+              const dist = Math.max(Math.abs(nx - centerX), Math.abs(ny - centerY))
+              const newScaled = dist * 2
+              const newBase = Math.round(newScaled / s)
+              const clamped = Math.max(40, Math.min(300, newBase))
+              dispatch({ type: 'SET_BADGE_SIZE', payload: clamped })
+            }
+
+            return (
+              <>
+                <Rect x={bx - 4} y={by - 4} width={bw + 8} height={bh + 8}
+                  stroke="#00C4FF" strokeWidth={1.5} dash={[4, 3]} listening={false} />
+                {corners.map((c, i) => (
+                  <Rect
+                    key={`badge-handle-${i}`}
+                    x={c.cx - hsz / 2} y={c.cy - hsz / 2}
+                    width={hsz} height={hsz}
+                    fill="#00C4FF"
+                    draggable
+                    onDragEnd={handleResize}
+                    onClick={(e) => { e.cancelBubble = true }}
+                  />
+                ))}
+              </>
+            )
+          })()}
         </Layer>
       </Stage>
 
