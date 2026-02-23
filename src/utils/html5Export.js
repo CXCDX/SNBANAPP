@@ -10,6 +10,7 @@ const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Playfair+Disp
 export async function generateHTML5Banner({ format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient }) {
   const { width, height } = format
   const sc = Math.min(width, height) / 1080
+  const fontSc = width / 1080
   const padding = Math.round(40 * sc)
   const textAreaY = height * 0.50
 
@@ -54,7 +55,7 @@ export async function generateHTML5Banner({ format, state, bgImg, logoImg, badge
 
   function getPos(field, defaultLeft, defaultTop) {
     if (state.textPositions?.[field]) {
-      return { left: state.textPositions[field].x, top: state.textPositions[field].y }
+      return { left: state.textPositions[field].x * width, top: state.textPositions[field].y * height }
     }
     return { left: defaultLeft, top: defaultTop }
   }
@@ -146,7 +147,7 @@ export async function generateHTML5Banner({ format, state, bgImg, logoImg, badge
 
     const lines = [state.badgeLine1, state.badgeLine2, state.badgeLine3].filter(Boolean)
     if (lines.length > 0) {
-      const bfSize = Math.round((state.badgeFontSize || 12) * sc)
+      const bfSize = Math.max(10, Math.round((state.badgeFontSize || 12) * fontSc))
       const bfStyle = `${state.badgeBold ? 'bold' : ''} ${state.badgeItalic ? 'italic' : ''}`.trim()
       bctx.font = `${bfStyle || 'normal'} ${bfSize}px "${state.badgeFontFamily || 'Barlow Condensed'}", sans-serif`
       bctx.fillStyle = state.badgeTextColor || '#FFFFFF'
@@ -177,10 +178,10 @@ export async function generateHTML5Banner({ format, state, bgImg, logoImg, badge
 
   // Text elements
   let yOff = textAreaY
-  const headlineSize = Math.round((state.headlineSize || 48) * sc)
-  const taglineSize = Math.round((state.taglineSize || 28) * sc)
-  const subtextSize = Math.round((state.subtextSize || 20) * sc)
-  const ctaFontSize = Math.round((state.ctaSize || 18) * sc)
+  const headlineSize = Math.max(10, Math.round((state.headlineSize || 48) * fontSc))
+  const taglineSize = Math.max(10, Math.round((state.taglineSize || 28) * fontSc))
+  const subtextSize = Math.max(10, Math.round((state.subtextSize || 20) * fontSc))
+  const ctaFontSize = Math.max(10, Math.round((state.ctaSize || 18) * fontSc))
 
   if (state.headline) {
     const pos = getPos('headline', padding, yOff)
@@ -207,7 +208,7 @@ export async function generateHTML5Banner({ format, state, bgImg, logoImg, badge
   // Extra text layers
   for (const layer of extras) {
     if (!layer.content) continue
-    const layerSize = Math.round((layer.size || 24) * sc)
+    const layerSize = Math.max(10, Math.round((layer.size || 24) * fontSc))
     const pos = getPos(layer.id, padding, textAreaY + 60 * sc)
     const isHL = layer.type === 'headline'
     const isTL = layer.type === 'tagline'

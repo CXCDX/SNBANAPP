@@ -73,18 +73,24 @@ export function renderBannerCanvas({ format, state, bgImg, logoImg, badgeImg, au
   }
 
   const sc = Math.min(format.width, format.height) / 1080
+  const fontSc = format.width / 1080
   const padding = Math.round(40 * sc)
-  const headlineSize = Math.round((state.headlineSize || 48) * sc)
-  const taglineSize = Math.round((state.taglineSize || 28) * sc)
-  const subtextSize = Math.round((state.subtextSize || 20) * sc)
-  const ctaFontSize = Math.round((state.ctaSize || 18) * sc)
-  const badgeFontSize = Math.round(14 * sc)
+  const headlineSize = Math.max(10, Math.round((state.headlineSize || 48) * fontSc))
+  const taglineSize = Math.max(10, Math.round((state.taglineSize || 28) * fontSc))
+  const subtextSize = Math.max(10, Math.round((state.subtextSize || 20) * fontSc))
+  const ctaFontSize = Math.max(10, Math.round((state.ctaSize || 18) * fontSc))
+  const badgeFontSize = Math.max(10, Math.round(14 * fontSc))
   const logoHeight = Math.round((state.logoSize || 40) * sc)
   const badgeImgSize = Math.round((state.badgeSize || 60) * sc)
   const textAreaY = format.height * 0.50
 
   const getPos = (field, defaultX, defaultY) => {
-    if (state.textPositions?.[field]) return state.textPositions[field]
+    if (state.textPositions?.[field]) {
+      return {
+        x: state.textPositions[field].x * format.width,
+        y: state.textPositions[field].y * format.height,
+      }
+    }
     return { x: defaultX, y: defaultY }
   }
 
@@ -147,7 +153,7 @@ export function renderBannerCanvas({ format, state, bgImg, logoImg, badgeImg, au
 
     const lines = [state.badgeLine1, state.badgeLine2, state.badgeLine3].filter(Boolean)
     if (lines.length > 0) {
-      const bfSize = Math.round((state.badgeFontSize || 12) * sc)
+      const bfSize = Math.max(10, Math.round((state.badgeFontSize || 12) * fontSc))
       const bfStyle = `${state.badgeBold ? 'bold' : ''} ${state.badgeItalic ? 'italic' : ''}`.trim()
       ctx.font = `${bfStyle || 'normal'} ${bfSize}px "${state.badgeFontFamily || 'Barlow Condensed'}", sans-serif`
       ctx.fillStyle = state.badgeTextColor || '#FFFFFF'
@@ -220,7 +226,7 @@ export function renderBannerCanvas({ format, state, bgImg, logoImg, badgeImg, au
   const extras = state.extraTextLayers || []
   for (const layer of extras) {
     if (!layer.content) continue
-    const layerSize = Math.round((layer.size || 24) * sc)
+    const layerSize = Math.max(10, Math.round((layer.size || 24) * fontSc))
     const pos = getPos(layer.id, padding, textAreaY + 60 * sc)
     const isHL = layer.type === 'headline'
     const isTL = layer.type === 'tagline'

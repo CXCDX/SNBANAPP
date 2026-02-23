@@ -103,10 +103,11 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
   }, [bgImage, width, height, focusPoint])
 
   const s = Math.min(width, height) / 1080
-  const hSize = Math.round((headlineSize || 48) * s)
-  const tSize = Math.round((taglineSize || 28) * s)
-  const sSize = Math.round((subtextSize || 20) * s)
-  const cSize = Math.round((ctaSize || 18) * s)
+  const fontSc = width / 1080
+  const hSize = Math.max(10, Math.round((headlineSize || 48) * fontSc))
+  const tSize = Math.max(10, Math.round((taglineSize || 28) * fontSc))
+  const sSize = Math.max(10, Math.round((subtextSize || 20) * fontSc))
+  const cSize = Math.max(10, Math.round((ctaSize || 18) * fontSc))
   const logoH = Math.round((logoSize || 40) * s)
   const pad = Math.round(40 * s)
   const badgeImgSz = Math.round((badgeSize || 60) * s)
@@ -118,14 +119,19 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
   const showBadge = badgeEnabled || badgeLine1 || badgeLine2 || badgeLine3
 
   const getPos = (field, defaultX, defaultY) => {
-    if (textPositions[field]) return textPositions[field]
+    if (textPositions[field]) {
+      return {
+        x: textPositions[field].x * width,
+        y: textPositions[field].y * height,
+      }
+    }
     return { x: defaultX, y: defaultY }
   }
 
   const handleDragEnd = (field) => (e) => {
     dispatch({
       type: 'SET_TEXT_POSITION',
-      payload: { field, position: { x: e.target.x(), y: e.target.y() } },
+      payload: { field, position: { x: e.target.x() / width, y: e.target.y() / height } },
     })
   }
 
@@ -251,7 +257,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
             const scaledSize = Math.round(badgeSize * s)
             const bp = getCornerPos(badgePosition, width, height, scaledSize, scaledSize, pad)
             const half = scaledSize / 2
-            const scaledFontSize = Math.round(badgeFontSizeSetting * s)
+            const scaledFontSize = Math.max(10, Math.round(badgeFontSizeSetting * fontSc))
             const lines = [badgeLine1, badgeLine2, badgeLine3].filter(Boolean)
             const text = lines.join('\n')
             const fontStyle = `${badgeBold ? 'bold' : ''} ${badgeItalic ? 'italic' : ''}`.trim() || 'normal'
@@ -392,7 +398,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
           {/* Extra text layers */}
           {(extraTextLayers || []).map(layer => {
             if (!layer.content) return null
-            const layerSize = Math.round((layer.size || 24) * s)
+            const layerSize = Math.max(10, Math.round((layer.size || 24) * fontSc))
             const pos = getPos(layer.id, pad, textAreaY + 60 * s)
             const isHeadline = layer.type === 'headline'
             const isTagline = layer.type === 'tagline'

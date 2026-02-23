@@ -14,9 +14,9 @@ function getCornerPos(position, canvasW, canvasH, elemW, elemH, padding) {
   }
 }
 
-function BadgeDesigner({ x, y, size, shape, bgColor, textColor, borderColor, borderWidth, fontFamily, fontSize, bold, italic, textAlign, line1, line2, line3, rotation, scale: s }) {
+function BadgeDesigner({ x, y, size, shape, bgColor, textColor, borderColor, borderWidth, fontFamily, fontSize, bold, italic, textAlign, line1, line2, line3, rotation, scale: s, fontScale }) {
   const scaledSize = Math.round(size * s)
-  const scaledFontSize = Math.round(fontSize * s)
+  const scaledFontSize = Math.max(10, Math.round(fontSize * (fontScale || s)))
   const lines = [line1, line2, line3].filter(Boolean)
   const text = lines.join('\n')
   const fontStyle = `${bold ? 'bold' : ''} ${italic ? 'italic' : ''}`.trim() || 'normal'
@@ -147,10 +147,11 @@ export default function BannerCanvas({ format, scale = 1 }) {
   }, [bgImage, width, height, focusPoint])
 
   const s = Math.min(width, height) / 1080
-  const hSize = Math.round((headlineSize || 48) * s)
-  const tSize = Math.round((taglineSize || 28) * s)
-  const sSize = Math.round((subtextSize || 20) * s)
-  const cSize = Math.round((ctaSize || 18) * s)
+  const fontSc = width / 1080
+  const hSize = Math.max(10, Math.round((headlineSize || 48) * fontSc))
+  const tSize = Math.max(10, Math.round((taglineSize || 28) * fontSc))
+  const sSize = Math.max(10, Math.round((subtextSize || 20) * fontSc))
+  const cSize = Math.max(10, Math.round((ctaSize || 18) * fontSc))
   const logoH = Math.round((logoSize || 40) * s)
   const padding = Math.round(40 * s)
   const badgeImgSize = Math.round((badgeSize || 60) * s)
@@ -163,7 +164,12 @@ export default function BannerCanvas({ format, scale = 1 }) {
   const showBadge = badgeEnabled || badgeLine1 || badgeLine2 || badgeLine3
 
   const getPos = (field, defaultX, defaultY) => {
-    if (textPositions[field]) return textPositions[field]
+    if (textPositions[field]) {
+      return {
+        x: textPositions[field].x * width,
+        y: textPositions[field].y * height,
+      }
+    }
     return { x: defaultX, y: defaultY }
   }
 
@@ -210,7 +216,7 @@ export default function BannerCanvas({ format, scale = 1 }) {
             fontFamily={badgeFontFamily} fontSize={badgeFontSizeSetting}
             bold={badgeBold} italic={badgeItalic} textAlign={badgeTextAlign}
             line1={badgeLine1} line2={badgeLine2} line3={badgeLine3}
-            rotation={badgeRotation} scale={s}
+            rotation={badgeRotation} scale={s} fontScale={fontSc}
           />
         )}
 
@@ -304,7 +310,7 @@ export default function BannerCanvas({ format, scale = 1 }) {
         {/* Extra text layers */}
         {extraTextLayers.map(layer => {
           if (!layer.content) return null
-          const layerSize = Math.round((layer.size || 24) * s)
+          const layerSize = Math.max(10, Math.round((layer.size || 24) * fontSc))
           const pos = getPos(layer.id, padding, textAreaY + 60 * s)
           const isHeadline = layer.type === 'headline'
           const isTagline = layer.type === 'tagline'
