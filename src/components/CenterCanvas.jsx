@@ -5,7 +5,6 @@ import { getImageLuminance } from '../utils/luminance'
 import BannerCanvas from './BannerCanvas'
 import EditModeBannerCanvas from './EditModeBannerCanvas'
 
-const MIN_DIMENSION = 1000
 
 // Group formats by platform for the tab bar
 const PLATFORMS = [...new Set(AD_FORMATS.map(f => f.platform))]
@@ -75,10 +74,6 @@ export default function CenterCanvas() {
     reader.onload = () => {
       const img = new Image()
       img.onload = () => {
-        if (img.width < MIN_DIMENSION || img.height < MIN_DIMENSION) {
-          dispatch({ type: 'ADD_TOAST', payload: { message: `Image must be at least ${MIN_DIMENSION}x${MIN_DIMENSION}px`, variant: 'error' } })
-          return
-        }
         const luminance = getImageLuminance(img)
         dispatch({
           type: 'SET_IMAGE',

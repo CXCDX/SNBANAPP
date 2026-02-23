@@ -5,7 +5,6 @@ import { getImageLuminance } from '../utils/luminance'
 import { AD_FORMATS } from '../utils/formats'
 import FocusPointSelector from './FocusPointSelector'
 
-const MIN_DIMENSION = 1000
 
 export default function ImageUpload() {
   const { image } = useAppState()
@@ -29,11 +28,6 @@ export default function ImageUpload() {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Invalid image file', variant: 'error' } })
       }
       img.onload = () => {
-        if (img.width < MIN_DIMENSION || img.height < MIN_DIMENSION) {
-          setUploadError(`Image too small (${img.width}×${img.height}). Minimum ${MIN_DIMENSION}×${MIN_DIMENSION}px.`)
-          dispatch({ type: 'ADD_TOAST', payload: { message: `Image must be at least ${MIN_DIMENSION}×${MIN_DIMENSION}px`, variant: 'error' } })
-          return
-        }
         setUploadError(null)
         const luminance = getImageLuminance(img)
         dispatch({
@@ -87,7 +81,7 @@ export default function ImageUpload() {
             <p className="text-[11px] font-mono text-secondary">
               {isDragActive ? 'Drop here' : 'Drop image or click'}
             </p>
-            <p className="text-[11px] font-mono text-secondary mt-1">PNG, JPG, WEBP — min {MIN_DIMENSION}×{MIN_DIMENSION}px</p>
+            <p className="text-[11px] font-mono text-secondary mt-1">PNG, JPG, WEBP</p>
             {uploadError && (
               <p className="text-[11px] font-mono mt-2" style={{ color: '#FF3D57' }}>
                 {uploadError}
