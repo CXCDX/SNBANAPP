@@ -93,7 +93,7 @@ export default function LeftPanel() {
 
           <div className="h-px bg-border" />
 
-          <CollapsibleSection title="Badges" defaultOpen={false}>
+          <CollapsibleSection title="Badges" defaultOpen={true}>
             <BadgeLibrary />
           </CollapsibleSection>
 

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
-import { Stage, Layer, Rect, Text, Image as KonvaImage, Group, Circle, Star, Shape } from 'react-konva'
+import { Stage, Layer, Rect, Text, Image as KonvaImage, Group, Circle, Star } from 'react-konva'
 import { useAppState } from '../store/AppContext'
 import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
@@ -91,7 +91,7 @@ export default function BannerCanvas({ format, scale = 1 }) {
     subtextFont, subtextColor, subtextSize,
     ctaFont, ctaColor, ctaSize,
     activeBadgeSrc, focusPoints,
-    logoPosition, logoSize, badgePosition, badgeSize,
+    logoPosition, logoSize, badgePosition, badgeSize, badgeEnabled,
     badgeShape, badgeBgColor, badgeTextColor, badgeBorderColor, badgeBorderWidth,
     badgeFontFamily, badgeFontSize: badgeFontSizeSetting, badgeBold, badgeItalic, badgeTextAlign,
     badgeLine1, badgeLine2, badgeLine3, badgeRotation,
@@ -159,7 +159,11 @@ export default function BannerCanvas({ format, scale = 1 }) {
   const taglineEndY = tagline ? headlineEndY + tSize * 1.3 + 4 : headlineEndY
   const subtextStartY = taglineEndY + 4
 
-  const hasBadgeDesigner = badgeLine1 || badgeLine2 || badgeLine3
+  const showBadge = badgeEnabled || badgeLine1 || badgeLine2 || badgeLine3
+
+  // Pre-compute badge position
+  const scaledBadgeSz = Math.round((badgeSize || 60) * s)
+  const badgePos = getCornerPos(badgePosition, width, height, scaledBadgeSz, scaledBadgeSz, padding)
 
   return (
     <Stage
@@ -190,48 +194,29 @@ export default function BannerCanvas({ format, scale = 1 }) {
           />
         )}
 
-        {/* Badge designer — shape-based badge (priority) */}
-        {hasBadgeDesigner && (() => {
-          const scaledBadge = Math.round((badgeSize || 60) * s)
-          const bp = getCornerPos(badgePosition, width, height, scaledBadge, scaledBadge, padding)
-          return (
-            <BadgeDesigner
-              x={bp.x} y={bp.y}
-              size={badgeSize} shape={badgeShape}
-              bgColor={badgeBgColor} textColor={badgeTextColor}
-              borderColor={badgeBorderColor} borderWidth={badgeBorderWidth}
-              fontFamily={badgeFontFamily} fontSize={badgeFontSizeSetting}
-              bold={badgeBold} italic={badgeItalic} textAlign={badgeTextAlign}
-              line1={badgeLine1} line2={badgeLine2} line3={badgeLine3}
-              rotation={badgeRotation} scale={s}
-            />
-          )
-        })()}
+        {/* Badge designer — shape with optional text */}
+        {showBadge && (
+          <BadgeDesigner
+            x={badgePos.x} y={badgePos.y}
+            size={badgeSize} shape={badgeShape}
+            bgColor={badgeBgColor} textColor={badgeTextColor}
+            borderColor={badgeBorderColor} borderWidth={badgeBorderWidth}
+            fontFamily={badgeFontFamily} fontSize={badgeFontSizeSetting}
+            bold={badgeBold} italic={badgeItalic} textAlign={badgeTextAlign}
+            line1={badgeLine1} line2={badgeLine2} line3={badgeLine3}
+            rotation={badgeRotation} scale={s}
+          />
+        )}
 
-        {/* Badge image from library — fallback when no designer badge */}
-        {!hasBadgeDesigner && badgeImage && (() => {
-          const bh = badgeImgSize * (badgeImage.height / badgeImage.width)
-          const bp = getCornerPos(badgePosition, width, height, badgeImgSize, bh, padding)
-          return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSize} height={bh} />
-        })()}
-
-        {/* Old badge text fallback — for backward compat */}
-        {!hasBadgeDesigner && !badgeImage && badge && (() => {
-          const badgeFontSz = Math.round(14 * s)
-          const bw = Math.max(badge.length * badgeFontSz * 0.65, 60)
-          const bh = badgeFontSz * 2.2
-          const bp = getCornerPos(badgePosition, width, height, bw, bh, padding)
-          return (
-            <Group x={bp.x} y={bp.y}>
-              <Rect width={bw} height={bh} fill={brandColor} />
-              <Text
-                text={badge} width={bw} height={bh}
-                align="center" verticalAlign="middle"
-                fontSize={badgeFontSz} fontFamily={headlineFont} fontStyle="bold" fill="#FFFFFF"
-              />
-            </Group>
-          )
-        })()}
+        {/* Badge image from library — fallback when badge designer is off */}
+        {!showBadge && badgeImage && (
+          <KonvaImage
+            image={badgeImage}
+            x={badgePos.x} y={badgePos.y}
+            width={badgeImgSize}
+            height={badgeImgSize * (badgeImage.height / badgeImage.width)}
+          />
+        )}
 
         {/* Logo — positioned */}
         {logoImage && (() => {

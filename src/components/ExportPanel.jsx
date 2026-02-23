@@ -259,9 +259,9 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
 
   // Badge — positioned
   const bpos = state.badgePosition || 'top-right'
-  const hasBadgeDesigner = state.badgeLine1 || state.badgeLine2 || state.badgeLine3
+  const showBadge = state.badgeEnabled || state.badgeLine1 || state.badgeLine2 || state.badgeLine3
 
-  if (hasBadgeDesigner) {
+  if (showBadge) {
     // Badge designer: render shape + multi-line text
     const scaledSize = Math.round((state.badgeSize || 60) * sc)
     const bp = getCornerPos(bpos, format.width, format.height, scaledSize, scaledSize, padding)

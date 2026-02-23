@@ -49,7 +49,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
     subtextFont, subtextColor, subtextSize,
     ctaFont, ctaColor, ctaSize,
     activeBadgeSrc, focusPoints, textPositions,
-    logoPosition, logoSize, badgePosition, badgeSize,
+    logoPosition, logoSize, badgePosition, badgeSize, badgeEnabled,
     badgeShape, badgeBgColor, badgeTextColor, badgeBorderColor, badgeBorderWidth,
     badgeFontFamily, badgeFontSize: badgeFontSizeSetting, badgeBold, badgeItalic, badgeTextAlign,
     badgeLine1, badgeLine2, badgeLine3, badgeRotation,
@@ -115,7 +115,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
   const headlineEndY = headline ? textAreaY + hSize * 1.2 + 6 : textAreaY
   const taglineEndY = tagline ? headlineEndY + tSize * 1.3 + 4 : headlineEndY
 
-  const hasBadgeDesigner = badgeLine1 || badgeLine2 || badgeLine3
+  const showBadge = badgeEnabled || badgeLine1 || badgeLine2 || badgeLine3
 
   const getPos = (field, defaultX, defaultY) => {
     if (textPositions[field]) return textPositions[field]
@@ -247,7 +247,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
           )}
 
           {/* Badge designer — shape-based badge (priority) */}
-          {hasBadgeDesigner && (() => {
+          {showBadge && (() => {
             const scaledSize = Math.round(badgeSize * s)
             const bp = getCornerPos(badgePosition, width, height, scaledSize, scaledSize, pad)
             const half = scaledSize / 2
@@ -285,14 +285,14 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
           })()}
 
           {/* Badge image — fallback */}
-          {!hasBadgeDesigner && badgeImage && (() => {
+          {!showBadge && badgeImage && (() => {
             const bh = badgeImgSz * (badgeImage.height / badgeImage.width)
             const bp = getCornerPos(badgePosition, width, height, badgeImgSz, bh, pad)
             return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSz} height={bh} />
           })()}
 
           {/* Old badge text fallback */}
-          {!hasBadgeDesigner && !badgeImage && badge && (() => {
+          {!showBadge && !badgeImage && badge && (() => {
             const bfz = Math.round(14 * s)
             const bw = Math.max(badge.length * bfz * 0.65, 60)
             const bh = bfz * 2.2

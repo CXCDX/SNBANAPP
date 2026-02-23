@@ -107,6 +107,7 @@ function BadgePreview({ shape, bgColor, textColor, borderColor, borderWidth, fon
 
 export default function BadgeLibrary() {
   const {
+    badgeEnabled,
     badgeShape, badgeBgColor, badgeTextColor, badgeBorderColor, badgeBorderWidth,
     badgeFontFamily, badgeFontSize, badgeBold, badgeItalic, badgeTextAlign,
     badgeLine1, badgeLine2, badgeLine3,
@@ -124,6 +125,17 @@ export default function BadgeLibrary() {
   return (
     <div className="space-y-3">
 
+      {/* Show/hide badge toggle */}
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={badgeEnabled}
+          onChange={e => dispatch({ type: 'SET_BADGE_ENABLED', payload: e.target.checked })}
+          className="checkbox-editorial"
+        />
+        <span className="text-[12px] font-mono text-ink">Show badge on canvas</span>
+      </label>
+
       {/* Live preview */}
       <BadgePreview
         shape={badgeShape} bgColor={badgeBgColor} textColor={badgeTextColor}
@@ -134,7 +146,7 @@ export default function BadgeLibrary() {
         rotation={badgeRotation}
       />
 
-      {!hasBadgeText && (
+      {!hasBadgeText && !badgeEnabled && (
         <p className="text-[10px] font-mono text-secondary text-center" style={{ color: '#999994' }}>
           Type text below to add badge to canvas
         </p>
