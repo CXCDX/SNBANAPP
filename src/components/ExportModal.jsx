@@ -543,7 +543,78 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
   }
 
   const bpos = state.badgePosition || 'top-right'
-  if (badgeImg) {
+  const hasBadgeDesigner = state.badgeLine1 || state.badgeLine2 || state.badgeLine3
+
+  if (hasBadgeDesigner) {
+    // Badge designer: render shape + multi-line text
+    const scaledSize = Math.round((state.badgeSize || 60) * sc)
+    const bp = getCornerPos(bpos, format.width, format.height, scaledSize, scaledSize, padding)
+    const cx = bp.x + scaledSize / 2
+    const cy = bp.y + scaledSize / 2
+    const half = scaledSize / 2
+    const rot = (state.badgeRotation || 0) * Math.PI / 180
+
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.rotate(rot)
+
+    // Shape
+    ctx.fillStyle = state.badgeBgColor || '#FF3D57'
+    const shape = state.badgeShape || 'circle'
+    if (shape === 'circle') {
+      ctx.beginPath()
+      ctx.arc(0, 0, half, 0, Math.PI * 2)
+      ctx.fill()
+      if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.stroke() }
+    } else if (shape === 'rectangle') {
+      ctx.fillRect(-half, -half, scaledSize, scaledSize)
+      if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.strokeRect(-half, -half, scaledSize, scaledSize) }
+    } else if (shape === 'pill') {
+      const ph = scaledSize * 0.6
+      const r = ph / 2
+      ctx.beginPath()
+      ctx.moveTo(-half + r, -ph / 2)
+      ctx.lineTo(half - r, -ph / 2)
+      ctx.arc(half - r, 0, r, -Math.PI / 2, Math.PI / 2)
+      ctx.lineTo(-half + r, ph / 2)
+      ctx.arc(-half + r, 0, r, Math.PI / 2, -Math.PI / 2)
+      ctx.closePath()
+      ctx.fill()
+      if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.stroke() }
+    } else if (shape === 'starburst') {
+      const points = 12
+      const inner = half * 0.7
+      ctx.beginPath()
+      for (let i = 0; i < points * 2; i++) {
+        const r2 = i % 2 === 0 ? half : inner
+        const a = (Math.PI * i) / points - Math.PI / 2
+        ctx[i === 0 ? 'moveTo' : 'lineTo'](Math.cos(a) * r2, Math.sin(a) * r2)
+      }
+      ctx.closePath()
+      ctx.fill()
+      if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.stroke() }
+    }
+
+    // Text
+    const lines = [state.badgeLine1, state.badgeLine2, state.badgeLine3].filter(Boolean)
+    if (lines.length > 0) {
+      const bfSize = Math.round((state.badgeFontSize || 12) * sc)
+      const bfStyle = `${state.badgeBold ? 'bold' : ''} ${state.badgeItalic ? 'italic' : ''}`.trim()
+      ctx.font = `${bfStyle || 'normal'} ${bfSize}px "${state.badgeFontFamily || 'Barlow Condensed'}", sans-serif`
+      ctx.fillStyle = state.badgeTextColor || '#FFFFFF'
+      ctx.textAlign = state.badgeTextAlign || 'center'
+      ctx.textBaseline = 'middle'
+      const lineH = bfSize * 1.2
+      const totalH = lines.length * lineH
+      const startY = -totalH / 2 + lineH / 2
+      lines.forEach((line, i) => {
+        const tx = state.badgeTextAlign === 'left' ? -half + 4 : state.badgeTextAlign === 'right' ? half - 4 : 0
+        ctx.fillText(line, tx, startY + i * lineH)
+      })
+    }
+
+    ctx.restore()
+  } else if (badgeImg) {
     const bh = badgeImgSize * (badgeImg.height / badgeImg.width)
     const bp = getCornerPos(bpos, format.width, format.height, badgeImgSize, bh, padding)
     ctx.drawImage(badgeImg, bp.x, bp.y, badgeImgSize, bh)
