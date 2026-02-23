@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { useAppState, useAppDispatch } from '../store/AppContext'
 import { AD_FORMATS } from '../utils/formats'
 import { getImageLuminance } from '../utils/luminance'
+import { renderBannerCanvas, prepareRenderParams } from '../utils/renderCanvas'
 import BannerCanvas from './BannerCanvas'
 import EditModeBannerCanvas from './EditModeBannerCanvas'
 
@@ -17,6 +18,7 @@ export default function CenterCanvas() {
   const [activePlatform, setActivePlatform] = useState('instagram')
   const [isDragOver, setIsDragOver] = useState(false)
   const [savedState, setSavedState] = useState(null)
+  const [isSharing, setIsSharing] = useState(false)
   const fileInputRef = useRef(null)
 
   const platformFormats = useMemo(() => {
@@ -145,6 +147,43 @@ export default function CenterCanvas() {
     setSavedState(null)
   }, [savedState, dispatch])
 
+  // Share Preview handler
+  const handleSharePreview = useCallback(async () => {
+    if (!image) {
+      dispatch({ type: 'ADD_TOAST', payload: { message: 'Önce bir görsel yükleyin', variant: 'error' } })
+      return
+    }
+    setIsSharing(true)
+    try {
+      const params = await prepareRenderParams(state)
+      const thumbnails = {}
+      for (const fmt of AD_FORMATS) {
+        try {
+          const canvas = renderBannerCanvas({ format: fmt, state, ...params })
+          thumbnails[fmt.id] = canvas.toDataURL('image/jpeg', 0.5)
+        } catch { /* skip failed format */ }
+      }
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+      const brandPrefix = state.logoType === 'shark' ? 'Shark' : state.logoType === 'ninja' ? 'Ninja' : 'SharkNinja'
+      const previewData = {
+        id,
+        brand: brandPrefix,
+        date: new Date().toISOString(),
+        thumbnails,
+        feedback: null,
+      }
+      localStorage.setItem(`banner-preview-${id}`, JSON.stringify(previewData))
+      const url = `${window.location.origin}${window.location.pathname}#/preview/${id}`
+      await navigator.clipboard.writeText(url)
+      dispatch({ type: 'ADD_TOAST', payload: { message: 'Link kopyalandı', variant: 'success' } })
+    } catch (err) {
+      console.error('Share preview failed:', err)
+      dispatch({ type: 'ADD_TOAST', payload: { message: 'Paylaşım başarısız', variant: 'error' } })
+    } finally {
+      setIsSharing(false)
+    }
+  }, [state, image, dispatch])
+
   // Escape key to exit edit mode
   useEffect(() => {
     if (!isEditMode) return
@@ -174,26 +213,37 @@ export default function CenterCanvas() {
         style={{ display: 'none' }}
       />
 
-      {/* Platform tabs */}
-      <div className="flex gap-4 mb-3">
-        {PLATFORMS.map(p => (
-          <button
-            key={p}
-            onClick={() => {
-              setActivePlatform(p)
-              const first = AD_FORMATS.find(f => f.platform === p)
-              if (first) dispatch({ type: 'SET_SELECTED_FORMAT', payload: first.id })
-            }}
-            className="font-mono uppercase tracking-[0.08em] bg-transparent border-none cursor-pointer pb-0.5 transition-all"
-            style={{
-              fontSize: '11px',
-              color: activePlatform === p ? '#0A0A0A' : '#999994',
-              borderBottom: activePlatform === p ? '1px solid #0A0A0A' : '1px solid transparent',
-            }}
-          >
-            {p}
-          </button>
-        ))}
+      {/* Top bar with platform tabs + share button */}
+      <div className="flex items-center gap-4 mb-3">
+        <div className="flex gap-4">
+          {PLATFORMS.map(p => (
+            <button
+              key={p}
+              onClick={() => {
+                setActivePlatform(p)
+                const first = AD_FORMATS.find(f => f.platform === p)
+                if (first) dispatch({ type: 'SET_SELECTED_FORMAT', payload: first.id })
+              }}
+              className="font-mono uppercase tracking-[0.08em] bg-transparent border-none cursor-pointer pb-0.5 transition-all"
+              style={{
+                fontSize: '11px',
+                color: activePlatform === p ? '#0A0A0A' : '#999994',
+                borderBottom: activePlatform === p ? '1px solid #0A0A0A' : '1px solid transparent',
+              }}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1" />
+        <button
+          onClick={handleSharePreview}
+          disabled={isSharing || !image}
+          className="font-mono text-[11px] uppercase tracking-[0.1em] px-4 py-1.5 cursor-pointer transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{ background: 'transparent', color: '#0A0A0A', border: '1px solid #E0E0DC' }}
+        >
+          {isSharing ? 'Hazırlanıyor...' : 'Share Preview'}
+        </button>
       </div>
 
       {/* Format tabs within platform */}
