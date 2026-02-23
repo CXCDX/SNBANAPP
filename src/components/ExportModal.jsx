@@ -2,10 +2,11 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 import { useAppState, useAppDispatch } from '../store/AppContext'
-import { AD_FORMATS, getFormatFolder } from '../utils/formats'
+import { AD_FORMATS, getFormatFolder, getPlatformFolder } from '../utils/formats'
 import { getCenterCrop } from '../utils/cropImage'
 import { getTextTheme, getOverlayGradient } from '../utils/luminance'
 import { runDesignChecks } from '../utils/designPolice'
+import { generateHTML5Banner } from '../utils/html5Export'
 
 const PLATFORMS = ['all', ...new Set(AD_FORMATS.map(f => f.platform))]
 
@@ -124,7 +125,7 @@ export default function ExportModal() {
   }, [selectedFormats, state, dispatch, exportFormat, quality])
 
   const doExport = async (formats) => {
-    console.log('[ExportModal] doExport start, formats:', formats.length)
+    console.log('[ExportModal] doExport start, formats:', formats.length, 'format:', exportFormat)
     setIsGenerating(true)
     cancelRef.current = false
     setProgress({ current: 0, total: formats.length })
@@ -149,55 +150,113 @@ export default function ExportModal() {
       const sFont = fontStr(state.subtextFont)
       const cFont = fontStr(state.ctaFont)
 
-      const ext = exportFormat === 'jpg' ? 'jpg' : 'png'
-      const mimeType = exportFormat === 'jpg' ? 'image/jpeg' : 'image/png'
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
       const brandPrefix = state.logoType === 'shark' ? 'shark' : state.logoType === 'ninja' ? 'ninja' : 'sharkninja'
-      const getFileName = (format, version = 1) => {
-        const fmtName = format.name.toLowerCase().replace(/[/\s]+/g, '_')
-        return `${brandPrefix}_${fmtName}_v${version}_${dateStr}.${ext}`
-      }
 
-      // Single format → direct download
-      if (formats.length === 1) {
-        const format = formats[0]
-        console.log('[ExportModal] Rendering single format:', format.id)
-        const canvas = renderCanvas({
-          format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
-        })
-        const blob = await new Promise(resolve =>
-          canvas.toBlob(resolve, mimeType, quality)
-        )
-        saveAs(blob, getFileName(format))
-        setProgress({ current: 1, total: 1 })
-        dispatch({ type: 'ADD_TOAST', payload: { message: `${format.name} downloaded`, variant: 'success' } })
-      } else {
-        // Multiple → ZIP with per-format folders
+      // HTML5 export path
+      if (exportFormat === 'html5') {
         const zip = new JSZip()
         let generated = 0
+        const sizeWarnings = []
 
         for (const format of formats) {
           if (cancelRef.current) break
 
-          console.log('[ExportModal] Rendering format:', format.id)
-          const canvas = renderCanvas({
-            format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+          console.log('[ExportModal] Generating HTML5 for:', format.id)
+          const { html, sizeKB } = await generateHTML5Banner({
+            format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient,
           })
-          const blob = await new Promise(resolve =>
-            canvas.toBlob(resolve, mimeType, quality)
-          )
-          const folder = getFormatFolder(format)
-          zip.file(`${folder}/${getFileName(format)}`, blob)
+
+          if (sizeKB > 150) {
+            sizeWarnings.push(`${format.name} (${sizeKB}KB)`)
+          }
+
+          const fmtName = format.name.toLowerCase().replace(/[/\s]+/g, '_')
+          const fileName = `${brandPrefix}_${fmtName}_${format.width}x${format.height}.html`
+          const folder = getPlatformFolder(format.platform)
+          zip.file(`${folder}/${fileName}`, html)
           generated++
           setProgress({ current: generated, total: formats.length })
           await new Promise(r => setTimeout(r, 0))
         }
 
         if (!cancelRef.current) {
+          if (sizeWarnings.length > 0) {
+            dispatch({
+              type: 'ADD_TOAST',
+              payload: {
+                message: `Bu banner${sizeWarnings.length > 1 ? 'lar' : ''} 150KB limitini aşıyor — görseli sıkıştırın veya metin azaltın: ${sizeWarnings.join(', ')}`,
+                variant: 'error',
+              },
+            })
+          }
+
           setProgress({ current: formats.length, total: formats.length, zipping: true })
-          const content = await zip.generateAsync({ type: 'blob' })
-          saveAs(content, `banners_${dateStr}.zip`)
-          dispatch({ type: 'ADD_TOAST', payload: { message: `${generated} banners downloaded`, variant: 'success' } })
+
+          if (formats.length === 1) {
+            const format = formats[0]
+            const { html } = await generateHTML5Banner({
+              format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient,
+            })
+            const blob = new Blob([html], { type: 'text/html' })
+            const fmtName = format.name.toLowerCase().replace(/[/\s]+/g, '_')
+            saveAs(blob, `${brandPrefix}_${fmtName}_${format.width}x${format.height}.html`)
+          } else {
+            const content = await zip.generateAsync({ type: 'blob' })
+            saveAs(content, `banners_html5_${dateStr}.zip`)
+          }
+          dispatch({ type: 'ADD_TOAST', payload: { message: `${generated} HTML5 banners downloaded`, variant: 'success' } })
+        }
+      } else {
+        // Image export path (PNG/JPG)
+        const ext = exportFormat === 'jpg' ? 'jpg' : 'png'
+        const mimeType = exportFormat === 'jpg' ? 'image/jpeg' : 'image/png'
+        const getFileName = (format, version = 1) => {
+          const fmtName = format.name.toLowerCase().replace(/[/\s]+/g, '_')
+          return `${brandPrefix}_${fmtName}_v${version}_${dateStr}.${ext}`
+        }
+
+        // Single format → direct download
+        if (formats.length === 1) {
+          const format = formats[0]
+          console.log('[ExportModal] Rendering single format:', format.id)
+          const canvas = renderCanvas({
+            format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+          })
+          const blob = await new Promise(resolve =>
+            canvas.toBlob(resolve, mimeType, quality)
+          )
+          saveAs(blob, getFileName(format))
+          setProgress({ current: 1, total: 1 })
+          dispatch({ type: 'ADD_TOAST', payload: { message: `${format.name} downloaded`, variant: 'success' } })
+        } else {
+          // Multiple → ZIP with per-format folders
+          const zip = new JSZip()
+          let generated = 0
+
+          for (const format of formats) {
+            if (cancelRef.current) break
+
+            console.log('[ExportModal] Rendering format:', format.id)
+            const canvas = renderCanvas({
+              format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+            })
+            const blob = await new Promise(resolve =>
+              canvas.toBlob(resolve, mimeType, quality)
+            )
+            const folder = getFormatFolder(format)
+            zip.file(`${folder}/${getFileName(format)}`, blob)
+            generated++
+            setProgress({ current: generated, total: formats.length })
+            await new Promise(r => setTimeout(r, 0))
+          }
+
+          if (!cancelRef.current) {
+            setProgress({ current: formats.length, total: formats.length, zipping: true })
+            const content = await zip.generateAsync({ type: 'blob' })
+            saveAs(content, `banners_${dateStr}.zip`)
+            dispatch({ type: 'ADD_TOAST', payload: { message: `${generated} banners downloaded`, variant: 'success' } })
+          }
         }
       }
       console.log('[ExportModal] doExport complete')
@@ -226,7 +285,7 @@ export default function ExportModal() {
 
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const brandPrefix = state.logoType === 'shark' ? 'shark' : state.logoType === 'ninja' ? 'ninja' : 'sharkninja'
-  const ext = exportFormat === 'jpg' ? 'jpg' : 'png'
+  const ext = exportFormat === 'html5' ? 'html' : exportFormat === 'jpg' ? 'jpg' : 'png'
 
   const filteredFormats = platformFilter === 'all'
     ? AD_FORMATS
@@ -255,6 +314,9 @@ export default function ExportModal() {
 
   const getFileName = (format, version = 1) => {
     const fmtName = format.name.toLowerCase().replace(/[/\s]+/g, '_')
+    if (exportFormat === 'html5') {
+      return `${brandPrefix}_${fmtName}_${format.width}x${format.height}.html`
+    }
     return `${brandPrefix}_${fmtName}_v${version}_${dateStr}.${ext}`
   }
 
@@ -376,7 +438,7 @@ export default function ExportModal() {
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-mono text-secondary uppercase">Format</span>
             <div className="flex gap-1">
-              {['png', 'jpg'].map(fmt => (
+              {['png', 'jpg', 'html5'].map(fmt => (
                 <button
                   key={fmt}
                   onClick={() => setExportFormat(fmt)}
@@ -393,26 +455,38 @@ export default function ExportModal() {
             </div>
           </div>
 
-          {/* Quality */}
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-mono text-secondary uppercase">Quality</span>
-            <div className="flex gap-1">
-              {[{ v: 0.6, l: '60%' }, { v: 0.8, l: '80%' }, { v: 1.0, l: '100%' }].map(opt => (
-                <button
-                  key={opt.v}
-                  onClick={() => setQuality(opt.v)}
-                  className="text-[11px] font-mono px-3 py-1 cursor-pointer transition-all"
-                  style={{
-                    background: quality === opt.v ? '#0A0A0A' : 'transparent',
-                    color: quality === opt.v ? '#FAFAF8' : '#999994',
-                    border: '1px solid ' + (quality === opt.v ? '#0A0A0A' : '#E0E0DC'),
-                  }}
-                >
-                  {opt.l}
-                </button>
-              ))}
+          {/* Quality — hidden for HTML5 */}
+          {exportFormat !== 'html5' && (
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-mono text-secondary uppercase">Quality</span>
+              <div className="flex gap-1">
+                {[{ v: 0.6, l: '60%' }, { v: 0.8, l: '80%' }, { v: 1.0, l: '100%' }].map(opt => (
+                  <button
+                    key={opt.v}
+                    onClick={() => setQuality(opt.v)}
+                    className="text-[11px] font-mono px-3 py-1 cursor-pointer transition-all"
+                    style={{
+                      background: quality === opt.v ? '#0A0A0A' : 'transparent',
+                      color: quality === opt.v ? '#FAFAF8' : '#999994',
+                      border: '1px solid ' + (quality === opt.v ? '#0A0A0A' : '#E0E0DC'),
+                    }}
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* HTML5 info */}
+          {exportFormat === 'html5' && (
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-mono text-secondary uppercase">Info</span>
+              <span className="text-[11px] font-mono text-secondary">
+                Self-contained .html files / Google Fonts / max 150KB per file
+              </span>
+            </div>
+          )}
 
           {/* File naming preview */}
           <div className="flex items-center gap-3">
@@ -453,9 +527,13 @@ export default function ExportModal() {
         >
           {isGenerating
             ? 'Generating...'
-            : selectedCount === 1
-              ? `Download ${ext.toUpperCase()}`
-              : `Download ZIP (${selectedCount} formats)`}
+            : exportFormat === 'html5'
+              ? selectedCount === 1
+                ? 'Download HTML5'
+                : `Download HTML5 ZIP (${selectedCount} formats)`
+              : selectedCount === 1
+                ? `Download ${ext.toUpperCase()}`
+                : `Download ZIP (${selectedCount} formats)`}
         </button>
 
         {/* Video section — collapsed, coming soon */}
