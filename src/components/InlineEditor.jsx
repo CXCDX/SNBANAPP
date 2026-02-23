@@ -159,13 +159,14 @@ export default function InlineEditor() {
   const scale = Math.min(scaleW, scaleH, 1)
 
   const s = Math.min(width, height) / 1080
-  const hSize = Math.round((headlineSize || 48) * s)
-  const tSize = Math.round((taglineSize || 28) * s)
-  const sSize = Math.round((subtextSize || 20) * s)
-  const cSize = Math.round((ctaSize || 18) * s)
+  const fontSc = width / 1080
+  const hSize = Math.max(10, Math.round((headlineSize || 48) * fontSc))
+  const tSize = Math.max(10, Math.round((taglineSize || 28) * fontSc))
+  const sSize = Math.max(10, Math.round((subtextSize || 20) * fontSc))
+  const cSize = Math.max(10, Math.round((ctaSize || 18) * fontSc))
   const pad = Math.round(40 * s)
   const badgeImgSz = Math.round((state.badgeSize || 60) * s)
-  const badgeFontSize = Math.round(14 * s)
+  const badgeFontSize = Math.max(10, Math.round(14 * fontSc))
   const logoH = Math.round((logoSize || 40) * s)
   const textAreaY = height * 0.50
 
@@ -179,14 +180,19 @@ export default function InlineEditor() {
   const taglineEndY = tagline ? headlineEndY + tSize * 1.3 + 4 : headlineEndY
 
   const getPos = (field, defaultX, defaultY) => {
-    if (textPositions[field]) return textPositions[field]
+    if (textPositions[field]) {
+      return {
+        x: textPositions[field].x * width,
+        y: textPositions[field].y * height,
+      }
+    }
     return { x: defaultX, y: defaultY }
   }
 
   const handleDragEnd = (field) => (e) => {
     dispatch({
       type: 'SET_TEXT_POSITION',
-      payload: { field, position: { x: e.target.x(), y: e.target.y() } },
+      payload: { field, position: { x: e.target.x() / width, y: e.target.y() / height } },
     })
   }
 
@@ -484,7 +490,7 @@ export default function InlineEditor() {
               {/* Extra text layers */}
               {(extraTextLayers || []).map(layer => {
                 if (!layer.content) return null
-                const layerSize = Math.round((layer.size || 24) * s)
+                const layerSize = Math.max(10, Math.round((layer.size || 24) * fontSc))
                 const pos = getPos(layer.id, pad, textAreaY + 60 * s)
                 const isHeadline = layer.type === 'headline'
                 const isTagline = layer.type === 'tagline'
