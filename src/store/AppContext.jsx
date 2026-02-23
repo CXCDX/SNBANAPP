@@ -76,6 +76,8 @@ const initialState = {
   // CSV
   csvData: null,
   csvFileName: '',
+  // Extra text layers (multiple instances per type)
+  extraTextLayers: [],
   // Inline editor
   editingFormat: null,
   textPositions: {},
@@ -110,6 +112,7 @@ const UNDOABLE_ACTIONS = new Set([
   'SET_BADGE_ITALIC', 'SET_BADGE_TEXT_ALIGN', 'SET_BADGE_LINE1', 'SET_BADGE_LINE2', 'SET_BADGE_LINE3',
   'SET_BADGE_ROTATION',
   'SET_TEXT_POSITION',
+  'ADD_TEXT_LAYER', 'UPDATE_TEXT_LAYER', 'REMOVE_TEXT_LAYER',
 ])
 
 const PERSIST_KEYS = [
@@ -265,6 +268,36 @@ function coreReducer(state, action) {
       return { ...state, csvData: action.payload.rows, csvFileName: action.payload.fileName }
     case 'CLEAR_CSV_DATA':
       return { ...state, csvData: null, csvFileName: '' }
+    case 'ADD_TEXT_LAYER': {
+      const { type: layerType } = action.payload
+      const defaults = {
+        headline: { font: 'Barlow Condensed', color: '', size: 72 },
+        tagline: { font: 'Playfair Display', color: '', size: 36 },
+        subtext: { font: 'DM Sans', color: '', size: 18 },
+      }
+      const d = defaults[layerType] || defaults.subtext
+      const layer = { id: `${layerType}-${Date.now()}`, type: layerType, content: '', ...d }
+      return { ...state, extraTextLayers: [...state.extraTextLayers, layer] }
+    }
+    case 'UPDATE_TEXT_LAYER': {
+      const { id, key, value } = action.payload
+      return {
+        ...state,
+        extraTextLayers: state.extraTextLayers.map(l =>
+          l.id === id ? { ...l, [key]: value } : l
+        ),
+      }
+    }
+    case 'REMOVE_TEXT_LAYER':
+      return {
+        ...state,
+        extraTextLayers: state.extraTextLayers.filter(l => l.id !== action.payload),
+        textPositions: (() => {
+          const pos = { ...state.textPositions }
+          delete pos[action.payload]
+          return pos
+        })(),
+      }
     case 'SET_EDITING_FORMAT':
       return { ...state, editingFormat: action.payload }
     case 'SET_TEXT_POSITION':

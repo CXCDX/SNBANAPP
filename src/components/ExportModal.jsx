@@ -26,12 +26,196 @@ export default function ExportModal() {
   const [showVideo, setShowVideo] = useState(false)
   const cancelRef = useRef(false)
 
+  // Generate thumbnails when modal opens
+  useEffect(() => {
+    if (!state.showExportModal) return
+    generateThumbnails()
+  }, [state.showExportModal])
+
+  const generateThumbnails = async () => {
+    console.log('[ExportModal] generateThumbnails start')
+    console.log('[ExportModal] state.image:', state.image ? `${state.image.width}x${state.image.height}` : 'null')
+    console.log('[ExportModal] state.headline:', state.headline)
+    console.log('[ExportModal] state.tagline:', state.tagline)
+    const thumbs = {}
+    let bgImg = null
+    let logoImg = null
+    let badgeImg = null
+
+    try {
+      if (state.image) bgImg = await loadImage(state.image.src)
+      if (state.logo) logoImg = await loadImage(state.logo)
+      if (state.activeBadgeSrc) badgeImg = await loadImage(state.activeBadgeSrc)
+    } catch (err) {
+      console.error('[ExportModal] Failed to load images for thumbnails:', err)
+    }
+
+    const textTheme = state.image ? getTextTheme(state.image.luminance) : 'light'
+    const autoColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
+    const overlayGradient = getOverlayGradient(textTheme)
+    const hFont = fontStr(state.headlineFont)
+    const tFont = fontStr(state.taglineFont)
+    const sFont = fontStr(state.subtextFont)
+    const cFont = fontStr(state.ctaFont)
+
+    for (const format of AD_FORMATS) {
+      try {
+        const canvas = renderCanvas({
+          format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+        })
+        thumbs[format.id] = canvas.toDataURL('image/jpeg', 0.5)
+      } catch (err) {
+        console.error(`[ExportModal] Thumbnail failed for ${format.id}:`, err)
+        thumbs[format.id] = null
+      }
+    }
+    console.log('[ExportModal] generateThumbnails done, formats:', Object.keys(thumbs).length)
+    setThumbnails(thumbs)
+  }
+
+  const handleDownload = useCallback(async () => {
+    const formats = AD_FORMATS.filter(f => selectedFormats.includes(f.id))
+    if (formats.length === 0) return
+
+    console.log('[ExportModal] handleDownload start, formats:', formats.length)
+    console.log('[ExportModal] state.image exists:', !!state.image)
+    console.log('[ExportModal] state.headline:', state.headline)
+
+    // Run design police — only block on errors, not warnings
+    const format0 = formats[0]
+    let checkCanvas = null
+    try {
+      checkCanvas = renderCanvas({
+        format: format0, state,
+        bgImg: null, logoImg: null, badgeImg: null,
+        autoColor: '#F5F5F5',
+        overlayGradient: getOverlayGradient('light'),
+        hFont: fontStr(state.headlineFont),
+        tFont: fontStr(state.taglineFont),
+        sFont: fontStr(state.subtextFont),
+        cFont: fontStr(state.ctaFont),
+      })
+    } catch (err) {
+      console.error('[ExportModal] Design check render failed:', err)
+    }
+
+    const issues = runDesignChecks(state, checkCanvas, format0)
+    const hasErrors = issues.some(i => i.level === 'error')
+
+    if (hasErrors) {
+      dispatch({ type: 'SET_DESIGN_ISSUES', payload: issues })
+      dispatch({ type: 'SET_SHOW_DESIGN_POLICE', payload: true })
+      return
+    }
+
+    // Proceed with export directly
+    await doExport(formats)
+  }, [selectedFormats, state, dispatch, exportFormat, quality])
+
+  const doExport = async (formats) => {
+    console.log('[ExportModal] doExport start, formats:', formats.length)
+    setIsGenerating(true)
+    cancelRef.current = false
+    setProgress({ current: 0, total: formats.length })
+
+    try {
+      let bgImg = null
+      let logoImg = null
+      let badgeImg = null
+
+      if (state.image) {
+        console.log('[ExportModal] Loading bg image...')
+        bgImg = await loadImage(state.image.src)
+      }
+      if (state.logo) logoImg = await loadImage(state.logo)
+      if (state.activeBadgeSrc) badgeImg = await loadImage(state.activeBadgeSrc)
+
+      const textTheme = state.image ? getTextTheme(state.image.luminance) : 'light'
+      const autoColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
+      const overlayGradient = getOverlayGradient(textTheme)
+      const hFont = fontStr(state.headlineFont)
+      const tFont = fontStr(state.taglineFont)
+      const sFont = fontStr(state.subtextFont)
+      const cFont = fontStr(state.ctaFont)
+
+      const ext = exportFormat === 'jpg' ? 'jpg' : 'png'
+      const mimeType = exportFormat === 'jpg' ? 'image/jpeg' : 'image/png'
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      const brandPrefix = state.logoType === 'shark' ? 'shark' : state.logoType === 'ninja' ? 'ninja' : 'sharkninja'
+      const getFileName = (format, version = 1) => {
+        const fmtName = format.name.toLowerCase().replace(/[/\s]+/g, '_')
+        return `${brandPrefix}_${fmtName}_v${version}_${dateStr}.${ext}`
+      }
+
+      // Single format → direct download
+      if (formats.length === 1) {
+        const format = formats[0]
+        console.log('[ExportModal] Rendering single format:', format.id)
+        const canvas = renderCanvas({
+          format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+        })
+        const blob = await new Promise(resolve =>
+          canvas.toBlob(resolve, mimeType, quality)
+        )
+        saveAs(blob, getFileName(format))
+        setProgress({ current: 1, total: 1 })
+        dispatch({ type: 'ADD_TOAST', payload: { message: `${format.name} downloaded`, variant: 'success' } })
+      } else {
+        // Multiple → ZIP with per-format folders
+        const zip = new JSZip()
+        let generated = 0
+
+        for (const format of formats) {
+          if (cancelRef.current) break
+
+          console.log('[ExportModal] Rendering format:', format.id)
+          const canvas = renderCanvas({
+            format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
+          })
+          const blob = await new Promise(resolve =>
+            canvas.toBlob(resolve, mimeType, quality)
+          )
+          const folder = getFormatFolder(format)
+          zip.file(`${folder}/${getFileName(format)}`, blob)
+          generated++
+          setProgress({ current: generated, total: formats.length })
+          await new Promise(r => setTimeout(r, 0))
+        }
+
+        if (!cancelRef.current) {
+          setProgress({ current: formats.length, total: formats.length, zipping: true })
+          const content = await zip.generateAsync({ type: 'blob' })
+          saveAs(content, `banners_${dateStr}.zip`)
+          dispatch({ type: 'ADD_TOAST', payload: { message: `${generated} banners downloaded`, variant: 'success' } })
+        }
+      }
+      console.log('[ExportModal] doExport complete')
+    } catch (err) {
+      console.error('[ExportModal] Export failed:', err)
+      dispatch({ type: 'ADD_TOAST', payload: { message: 'Export failed', variant: 'error' } })
+    } finally {
+      setIsGenerating(false)
+      setProgress(null)
+    }
+  }
+
+  // Listen for "export anyway" from design police
+  useEffect(() => {
+    const handler = () => {
+      const formats = AD_FORMATS.filter(f => selectedFormats.includes(f.id))
+      doExport(formats)
+    }
+    window.addEventListener('banner-export-anyway', handler)
+    return () => window.removeEventListener('banner-export-anyway', handler)
+  }, [selectedFormats, state])
+
+  // ---- All hooks are above this line ----
+  // Early return MUST be after all hooks to satisfy React rules of hooks
   if (!state.showExportModal) return null
 
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const brandPrefix = state.logoType === 'shark' ? 'shark' : state.logoType === 'ninja' ? 'ninja' : 'sharkninja'
   const ext = exportFormat === 'jpg' ? 'jpg' : 'png'
-  const mimeType = exportFormat === 'jpg' ? 'image/jpeg' : 'image/png'
 
   const filteredFormats = platformFilter === 'all'
     ? AD_FORMATS
@@ -62,157 +246,6 @@ export default function ExportModal() {
     const fmtName = format.name.toLowerCase().replace(/[/\s]+/g, '_')
     return `${brandPrefix}_${fmtName}_v${version}_${dateStr}.${ext}`
   }
-
-  // Generate thumbnails on mount
-  useEffect(() => {
-    if (!state.showExportModal) return
-    generateThumbnails()
-  }, [state.showExportModal])
-
-  const generateThumbnails = async () => {
-    const thumbs = {}
-    let bgImg = null
-    let logoImg = null
-    let badgeImg = null
-
-    if (state.image) bgImg = await loadImage(state.image.src)
-    if (state.logo) logoImg = await loadImage(state.logo)
-    if (state.activeBadgeSrc) badgeImg = await loadImage(state.activeBadgeSrc)
-
-    const textTheme = state.image ? getTextTheme(state.image.luminance) : 'light'
-    const autoColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
-    const overlayGradient = getOverlayGradient(textTheme)
-    const hFont = fontStr(state.headlineFont)
-    const tFont = fontStr(state.taglineFont)
-    const sFont = fontStr(state.subtextFont)
-    const cFont = fontStr(state.ctaFont)
-
-    for (const format of AD_FORMATS) {
-      try {
-        const canvas = renderCanvas({
-          format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
-        })
-        thumbs[format.id] = canvas.toDataURL('image/jpeg', 0.5)
-      } catch {
-        thumbs[format.id] = null
-      }
-    }
-    setThumbnails(thumbs)
-  }
-
-  const handleDownload = useCallback(async () => {
-    const formats = AD_FORMATS.filter(f => selectedFormats.includes(f.id))
-    if (formats.length === 0) return
-
-    // Run design police first
-    const format0 = formats[0]
-    let checkCanvas = null
-    try {
-      checkCanvas = renderCanvas({
-        format: format0, state,
-        bgImg: null, logoImg: null, badgeImg: null,
-        autoColor: '#F5F5F5',
-        overlayGradient: getOverlayGradient('light'),
-        hFont: fontStr(state.headlineFont),
-        tFont: fontStr(state.taglineFont),
-        sFont: fontStr(state.subtextFont),
-        cFont: fontStr(state.ctaFont),
-      })
-    } catch {}
-
-    const issues = runDesignChecks(state, checkCanvas, format0)
-    const hasIssues = issues.some(i => i.level === 'error' || i.level === 'warning')
-
-    if (hasIssues) {
-      dispatch({ type: 'SET_DESIGN_ISSUES', payload: issues })
-      dispatch({ type: 'SET_SHOW_DESIGN_POLICE', payload: true })
-      return
-    }
-
-    // Proceed with export
-    await doExport(formats)
-  }, [selectedFormats, state, dispatch, exportFormat, quality])
-
-  const doExport = async (formats) => {
-    setIsGenerating(true)
-    cancelRef.current = false
-    setProgress({ current: 0, total: formats.length })
-
-    try {
-      let bgImg = null
-      let logoImg = null
-      let badgeImg = null
-
-      if (state.image) bgImg = await loadImage(state.image.src)
-      if (state.logo) logoImg = await loadImage(state.logo)
-      if (state.activeBadgeSrc) badgeImg = await loadImage(state.activeBadgeSrc)
-
-      const textTheme = state.image ? getTextTheme(state.image.luminance) : 'light'
-      const autoColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
-      const overlayGradient = getOverlayGradient(textTheme)
-      const hFont = fontStr(state.headlineFont)
-      const tFont = fontStr(state.taglineFont)
-      const sFont = fontStr(state.subtextFont)
-      const cFont = fontStr(state.ctaFont)
-
-      // Single format → direct download
-      if (formats.length === 1) {
-        const format = formats[0]
-        const canvas = renderCanvas({
-          format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
-        })
-        const blob = await new Promise(resolve =>
-          canvas.toBlob(resolve, mimeType, quality)
-        )
-        saveAs(blob, getFileName(format))
-        setProgress({ current: 1, total: 1 })
-        dispatch({ type: 'ADD_TOAST', payload: { message: `${format.name} downloaded`, variant: 'success' } })
-      } else {
-        // Multiple → ZIP with per-format folders
-        const zip = new JSZip()
-        let generated = 0
-
-        for (const format of formats) {
-          if (cancelRef.current) break
-
-          const canvas = renderCanvas({
-            format, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient, hFont, tFont, sFont, cFont,
-          })
-          const blob = await new Promise(resolve =>
-            canvas.toBlob(resolve, mimeType, quality)
-          )
-          const folder = getFormatFolder(format)
-          zip.file(`${folder}/${getFileName(format)}`, blob)
-          generated++
-          setProgress({ current: generated, total: formats.length })
-          await new Promise(r => setTimeout(r, 0))
-        }
-
-        if (!cancelRef.current) {
-          setProgress({ current: formats.length, total: formats.length, zipping: true })
-          const content = await zip.generateAsync({ type: 'blob' })
-          saveAs(content, `banners_${dateStr}.zip`)
-          dispatch({ type: 'ADD_TOAST', payload: { message: `${generated} banners downloaded`, variant: 'success' } })
-        }
-      }
-    } catch (err) {
-      console.error('Export failed:', err)
-      dispatch({ type: 'ADD_TOAST', payload: { message: 'Export failed', variant: 'error' } })
-    } finally {
-      setIsGenerating(false)
-      setProgress(null)
-    }
-  }
-
-  // Listen for "export anyway" from design police
-  useEffect(() => {
-    const handler = () => {
-      const formats = AD_FORMATS.filter(f => selectedFormats.includes(f.id))
-      doExport(formats)
-    }
-    window.addEventListener('banner-export-anyway', handler)
-    return () => window.removeEventListener('banner-export-anyway', handler)
-  }, [selectedFormats, state])
 
   const selectedCount = selectedFormats.length
   const previewName = selectedCount > 0
@@ -277,7 +310,6 @@ export default function ExportModal() {
           {filteredFormats.map(format => {
             const isSelected = selectedFormats.includes(format.id)
             const thumb = thumbnails[format.id]
-            const aspect = format.height / format.width
 
             return (
               <div
@@ -536,6 +568,11 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
   const badgeImgSize = Math.round((state.badgeSize || 60) * sc)
   const textAreaY = format.height * 0.50
 
+  const getPos = (field, defaultX, defaultY) => {
+    if (state.textPositions?.[field]) return state.textPositions[field]
+    return { x: defaultX, y: defaultY }
+  }
+
   if (logoImg) {
     const lw = logoHeight * (logoImg.width / logoImg.height)
     const lp = getCornerPos(state.logoPosition, format.width, format.height, lw, logoHeight, padding)
@@ -546,7 +583,6 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
   const showBadge = state.badgeEnabled || state.badgeLine1 || state.badgeLine2 || state.badgeLine3
 
   if (showBadge) {
-    // Badge designer: render shape + multi-line text
     const scaledSize = Math.round((state.badgeSize || 60) * sc)
     const bp = getCornerPos(bpos, format.width, format.height, scaledSize, scaledSize, padding)
     const cx = bp.x + scaledSize / 2
@@ -558,7 +594,6 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
     ctx.translate(cx, cy)
     ctx.rotate(rot)
 
-    // Shape
     ctx.fillStyle = state.badgeBgColor || '#FF3D57'
     const shape = state.badgeShape || 'circle'
     if (shape === 'circle') {
@@ -595,7 +630,6 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
       if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.stroke() }
     }
 
-    // Text
     const lines = [state.badgeLine1, state.badgeLine2, state.badgeLine3].filter(Boolean)
     if (lines.length > 0) {
       const bfSize = Math.round((state.badgeFontSize || 12) * sc)
@@ -634,47 +668,68 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
   let yOff = textAreaY
 
   if (state.headline) {
+    const pos = getPos('headline', padding, yOff)
     ctx.fillStyle = state.headlineColor || autoColor
     ctx.font = `bold ${headlineSize}px ${hFont}`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
     ctx.globalAlpha = 1
-    yOff = wrapText(ctx, state.headline.toUpperCase(), padding, yOff, format.width - padding * 2, headlineSize * 1.1)
+    yOff = wrapText(ctx, state.headline.toUpperCase(), pos.x, pos.y, format.width - padding * 2, headlineSize * 1.1)
     yOff += 6
   }
 
   if (state.tagline) {
+    const pos = getPos('tagline', padding, yOff)
     ctx.fillStyle = state.taglineColor || autoColor
     ctx.globalAlpha = state.taglineColor ? 1 : 0.9
     ctx.font = `italic ${taglineSize}px ${tFont}`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    yOff = wrapText(ctx, state.tagline, padding, yOff, format.width - padding * 2, taglineSize * 1.3)
+    yOff = wrapText(ctx, state.tagline, pos.x, pos.y, format.width - padding * 2, taglineSize * 1.3)
     yOff += 4
     ctx.globalAlpha = 1
   }
 
   if (state.subtext) {
+    const pos = getPos('subtext', padding, yOff)
     ctx.fillStyle = state.subtextColor || autoColor
     ctx.globalAlpha = state.subtextColor ? 1 : 0.8
     ctx.font = `${subtextSize}px ${sFont}`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    wrapText(ctx, state.subtext, padding, yOff, format.width - padding * 2, subtextSize * 1.6)
+    wrapText(ctx, state.subtext, pos.x, pos.y, format.width - padding * 2, subtextSize * 1.6)
+    ctx.globalAlpha = 1
+  }
+
+  // Extra text layers
+  const extras = state.extraTextLayers || []
+  for (const layer of extras) {
+    if (!layer.content) continue
+    const layerSize = Math.round((layer.size || 24) * sc)
+    const pos = getPos(layer.id, padding, textAreaY + 60 * sc)
+    const isHL = layer.type === 'headline'
+    const isTL = layer.type === 'tagline'
+    const layerFont = fontStr(layer.font)
+    ctx.fillStyle = layer.color || autoColor
+    ctx.globalAlpha = layer.color ? 1 : (isTL ? 0.9 : isHL ? 1 : 0.8)
+    ctx.font = `${isHL ? 'bold' : isTL ? 'italic' : ''} ${layerSize}px ${layerFont}`.trim()
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    wrapText(ctx, isHL ? layer.content.toUpperCase() : layer.content, pos.x, pos.y, format.width - padding * 2, layerSize * 1.3)
     ctx.globalAlpha = 1
   }
 
   if (state.ctaText) {
+    const pos = getPos('cta', padding, format.height - padding - ctaFontSize * 2.5)
     const ctaW = Math.max(state.ctaText.length * ctaFontSize * 0.65, 100)
     const ctaH = ctaFontSize * 2.5
-    const ctaY = format.height - padding - ctaH
     ctx.fillStyle = state.ctaColor || '#0A0A0A'
-    ctx.fillRect(padding, ctaY, ctaW, ctaH)
+    ctx.fillRect(pos.x, pos.y, ctaW, ctaH)
     ctx.fillStyle = '#FFFFFF'
     ctx.font = `500 ${ctaFontSize}px ${cFont}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(state.ctaText.toUpperCase(), padding + ctaW / 2, ctaY + ctaH / 2)
+    ctx.fillText(state.ctaText.toUpperCase(), pos.x + ctaW / 2, pos.y + ctaH / 2)
   }
 
   ctx.fillStyle = state.brandColor
@@ -684,19 +739,24 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ')
-  let line = ''
+  // Handle explicit line breaks
+  const paragraphs = text.split('\n')
   let offsetY = y
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + ' '
-    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
-      ctx.fillText(line.trim(), x, offsetY)
-      line = words[i] + ' '
-      offsetY += lineHeight
-    } else {
-      line = testLine
+  for (const para of paragraphs) {
+    const words = para.split(' ')
+    let line = ''
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + ' '
+      if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+        ctx.fillText(line.trim(), x, offsetY)
+        line = words[i] + ' '
+        offsetY += lineHeight
+      } else {
+        line = testLine
+      }
     }
+    ctx.fillText(line.trim(), x, offsetY)
+    offsetY += lineHeight
   }
-  ctx.fillText(line.trim(), x, offsetY)
-  return offsetY + lineHeight
+  return offsetY
 }

@@ -48,7 +48,7 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
     taglineFont, taglineColor, taglineSize,
     subtextFont, subtextColor, subtextSize,
     ctaFont, ctaColor, ctaSize,
-    activeBadgeSrc, focusPoints, textPositions,
+    activeBadgeSrc, focusPoints, textPositions, extraTextLayers,
     logoPosition, logoSize, badgePosition, badgeSize, badgeEnabled,
     badgeShape, badgeBgColor, badgeTextColor, badgeBorderColor, badgeBorderWidth,
     badgeFontFamily, badgeFontSize: badgeFontSizeSetting, badgeBold, badgeItalic, badgeTextAlign,
@@ -388,6 +388,33 @@ export default function EditModeBannerCanvas({ format, scale = 1 }) {
               </Group>
             )
           })()}
+
+          {/* Extra text layers */}
+          {(extraTextLayers || []).map(layer => {
+            if (!layer.content) return null
+            const layerSize = Math.round((layer.size || 24) * s)
+            const pos = getPos(layer.id, pad, textAreaY + 60 * s)
+            const isHeadline = layer.type === 'headline'
+            const isTagline = layer.type === 'tagline'
+            return (
+              <Text
+                key={layer.id}
+                text={isHeadline ? layer.content.toUpperCase() : layer.content}
+                x={pos.x} y={pos.y} width={width - pad * 2}
+                fontSize={layerSize}
+                fontFamily={layer.font}
+                fontStyle={isHeadline ? 'bold' : isTagline ? 'italic' : 'normal'}
+                fill={layer.color || autoTextColor}
+                opacity={layer.color ? 1 : (isTagline ? 0.9 : isHeadline ? 1 : 0.8)}
+                lineHeight={isHeadline ? 1.1 : isTagline ? 1.3 : 1.6}
+                letterSpacing={isHeadline ? 2 : 0}
+                wrap="word"
+                draggable
+                onDragEnd={handleDragEnd(layer.id)}
+                onClick={() => setSelectedId(layer.id)}
+              />
+            )
+          })}
 
           <Rect x={0} y={height - 3} width={width} height={3} fill={brandColor} />
 

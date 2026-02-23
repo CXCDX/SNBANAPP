@@ -84,18 +84,19 @@ function BadgeDesigner({ x, y, size, shape, bgColor, textColor, borderColor, bor
 }
 
 export default function BannerCanvas({ format, scale = 1 }) {
+  const state = useAppState()
   const {
     image, headline, tagline, subtext, ctaText, badge, logo, brandColor,
     headlineFont, headlineColor, headlineSize,
     taglineFont, taglineColor, taglineSize,
     subtextFont, subtextColor, subtextSize,
     ctaFont, ctaColor, ctaSize,
-    activeBadgeSrc, focusPoints,
+    activeBadgeSrc, focusPoints, textPositions, extraTextLayers,
     logoPosition, logoSize, badgePosition, badgeSize, badgeEnabled,
     badgeShape, badgeBgColor, badgeTextColor, badgeBorderColor, badgeBorderWidth,
     badgeFontFamily, badgeFontSize: badgeFontSizeSetting, badgeBold, badgeItalic, badgeTextAlign,
     badgeLine1, badgeLine2, badgeLine3, badgeRotation,
-  } = useAppState()
+  } = state
 
   const formatKey = `${format.width}x${format.height}`
   const focusPoint = focusPoints[formatKey] || { x: 0.5, y: 0.5 }
@@ -161,6 +162,11 @@ export default function BannerCanvas({ format, scale = 1 }) {
 
   const showBadge = badgeEnabled || badgeLine1 || badgeLine2 || badgeLine3
 
+  const getPos = (field, defaultX, defaultY) => {
+    if (textPositions[field]) return textPositions[field]
+    return { x: defaultX, y: defaultY }
+  }
+
   // Pre-compute badge position
   const scaledBadgeSz = Math.round((badgeSize || 60) * s)
   const badgePos = getCornerPos(badgePosition, width, height, scaledBadgeSz, scaledBadgeSz, padding)
@@ -225,63 +231,99 @@ export default function BannerCanvas({ format, scale = 1 }) {
           return <KonvaImage image={logoImage} x={lp.x} y={lp.y} height={logoH} width={lw} />
         })()}
 
-        {headline && (
-          <Text
-            text={headline.toUpperCase()}
-            x={padding} y={textAreaY} width={width - padding * 2}
-            fontSize={hSize}
-            fontFamily={headlineFont}
-            fontStyle="bold"
-            fill={headlineColor || autoTextColor}
-            lineHeight={1.1} letterSpacing={2} wrap="word"
-          />
-        )}
-
-        {tagline && (
-          <Text
-            text={tagline}
-            x={padding} y={headlineEndY} width={width - padding * 2}
-            fontSize={tSize}
-            fontFamily={taglineFont}
-            fontStyle="italic"
-            fill={taglineColor || autoTextColor}
-            opacity={taglineColor ? 1 : 0.9}
-            lineHeight={1.3} wrap="word"
-          />
-        )}
-
-        {subtext && (
-          <Text
-            text={subtext}
-            x={padding} y={subtextStartY} width={width - padding * 2}
-            fontSize={sSize}
-            fontFamily={subtextFont}
-            fill={subtextColor || autoTextColor}
-            opacity={subtextColor ? 1 : 0.8}
-            lineHeight={1.6} wrap="word"
-          />
-        )}
-
-        {ctaText && (
-          <Group x={padding} y={height - padding - cSize * 2.8}>
-            <Rect
-              width={Math.max(ctaText.length * cSize * 0.65, 100)}
-              height={cSize * 2.5}
-              fill={ctaColor || '#0A0A0A'}
-            />
+        {headline && (() => {
+          const pos = getPos('headline', padding, textAreaY)
+          return (
             <Text
-              text={ctaText.toUpperCase()}
-              width={Math.max(ctaText.length * cSize * 0.65, 100)}
-              height={cSize * 2.5}
-              align="center" verticalAlign="middle"
-              fontSize={cSize}
-              fontFamily={ctaFont}
-              fontStyle="500"
-              fill="#FFFFFF"
-              letterSpacing={1}
+              text={headline.toUpperCase()}
+              x={pos.x} y={pos.y} width={width - padding * 2}
+              fontSize={hSize}
+              fontFamily={headlineFont}
+              fontStyle="bold"
+              fill={headlineColor || autoTextColor}
+              lineHeight={1.1} letterSpacing={2} wrap="word"
             />
-          </Group>
-        )}
+          )
+        })()}
+
+        {tagline && (() => {
+          const pos = getPos('tagline', padding, headlineEndY)
+          return (
+            <Text
+              text={tagline}
+              x={pos.x} y={pos.y} width={width - padding * 2}
+              fontSize={tSize}
+              fontFamily={taglineFont}
+              fontStyle="italic"
+              fill={taglineColor || autoTextColor}
+              opacity={taglineColor ? 1 : 0.9}
+              lineHeight={1.3} wrap="word"
+            />
+          )
+        })()}
+
+        {subtext && (() => {
+          const pos = getPos('subtext', padding, subtextStartY)
+          return (
+            <Text
+              text={subtext}
+              x={pos.x} y={pos.y} width={width - padding * 2}
+              fontSize={sSize}
+              fontFamily={subtextFont}
+              fill={subtextColor || autoTextColor}
+              opacity={subtextColor ? 1 : 0.8}
+              lineHeight={1.6} wrap="word"
+            />
+          )
+        })()}
+
+        {ctaText && (() => {
+          const pos = getPos('cta', padding, height - padding - cSize * 2.8)
+          return (
+            <Group x={pos.x} y={pos.y}>
+              <Rect
+                width={Math.max(ctaText.length * cSize * 0.65, 100)}
+                height={cSize * 2.5}
+                fill={ctaColor || '#0A0A0A'}
+              />
+              <Text
+                text={ctaText.toUpperCase()}
+                width={Math.max(ctaText.length * cSize * 0.65, 100)}
+                height={cSize * 2.5}
+                align="center" verticalAlign="middle"
+                fontSize={cSize}
+                fontFamily={ctaFont}
+                fontStyle="500"
+                fill="#FFFFFF"
+                letterSpacing={1}
+              />
+            </Group>
+          )
+        })()}
+
+        {/* Extra text layers */}
+        {extraTextLayers.map(layer => {
+          if (!layer.content) return null
+          const layerSize = Math.round((layer.size || 24) * s)
+          const pos = getPos(layer.id, padding, textAreaY + 60 * s)
+          const isHeadline = layer.type === 'headline'
+          const isTagline = layer.type === 'tagline'
+          return (
+            <Text
+              key={layer.id}
+              text={isHeadline ? layer.content.toUpperCase() : layer.content}
+              x={pos.x} y={pos.y} width={width - padding * 2}
+              fontSize={layerSize}
+              fontFamily={layer.font}
+              fontStyle={isHeadline ? 'bold' : isTagline ? 'italic' : 'normal'}
+              fill={layer.color || autoTextColor}
+              opacity={layer.color ? 1 : (isTagline ? 0.9 : isHeadline ? 1 : 0.8)}
+              lineHeight={isHeadline ? 1.1 : isTagline ? 1.3 : 1.6}
+              letterSpacing={isHeadline ? 2 : 0}
+              wrap="word"
+            />
+          )
+        })}
 
         <Rect x={0} y={height - 3} width={width} height={3} fill={brandColor} />
       </Layer>
