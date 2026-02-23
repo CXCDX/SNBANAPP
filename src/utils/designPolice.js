@@ -2,10 +2,13 @@
  * AI Design Police — Rule-based validation engine.
  * Zero external API calls. Pure JavaScript.
  *
- * Rules are organized by category:
- *   TEXT_001–005  — Copy & text validation
- *   VISUAL_001–004 — Layout & visual validation
- *   BRAND_001–002  — Brand compliance
+ * Rules:
+ *   CONTRAST  — Text vs background contrast (WCAG)
+ *   SAFEZONE  — Text within 5% margin
+ *   CTA       — CTA button presence
+ *   OVERLAP   — Badge/text overlap
+ *   FONTS     — Font consistency (max 5 families)
+ *   IMAGE     — Background image required
  */
 
 /**
@@ -48,7 +51,7 @@ function relativeLuminance({ r, g, b }) {
 /**
  * WCAG contrast ratio between two colors.
  */
-function contrastRatio(color1, color2) {
+export function contrastRatio(color1, color2) {
   const l1 = relativeLuminance(color1)
   const l2 = relativeLuminance(color2)
   const lighter = Math.max(l1, l2)
@@ -56,7 +59,7 @@ function contrastRatio(color1, color2) {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
   return result
     ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
@@ -64,133 +67,275 @@ function hexToRgb(hex) {
 }
 
 /**
+ * Compute text element positions & sizes for rule checks.
+ * Returns array of { field, x, y, w, h, fontSize, color, label }
+ */
+function getTextElements(state, format) {
+  const sc = Math.min(format.width, format.height) / 1080
+  const padding = Math.round(40 * sc)
+  const textAreaY = format.height * 0.50
+  const autoColor = state.image && state.image.luminance > 128 ? '#1A1A1A' : '#F5F5F5'
+
+  const elements = []
+
+  const getPos = (field, defaultX, defaultY) => {
+    if (state.textPositions?.[field]) return state.textPositions[field]
+    return { x: defaultX, y: defaultY }
+  }
+
+  let yOff = textAreaY
+
+  if (state.headline) {
+    const hSize = Math.round((state.headlineSize || 48) * sc)
+    const pos = getPos('headline', padding, yOff)
+    elements.push({
+      field: 'headline', label: 'Headline',
+      x: pos.x, y: pos.y,
+      w: format.width - padding * 2, h: hSize * 1.5,
+      fontSize: hSize,
+      color: state.headlineColor || autoColor,
+      font: state.headlineFont,
+    })
+    yOff = pos.y + hSize * 1.2 + 6
+  }
+
+  if (state.tagline) {
+    const tSize = Math.round((state.taglineSize || 28) * sc)
+    const pos = getPos('tagline', padding, yOff)
+    elements.push({
+      field: 'tagline', label: 'Tagline',
+      x: pos.x, y: pos.y,
+      w: format.width - padding * 2, h: tSize * 1.5,
+      fontSize: tSize,
+      color: state.taglineColor || autoColor,
+      font: state.taglineFont,
+    })
+    yOff = pos.y + tSize * 1.3 + 4
+  }
+
+  if (state.subtext) {
+    const sSize = Math.round((state.subtextSize || 20) * sc)
+    const pos = getPos('subtext', padding, yOff)
+    elements.push({
+      field: 'subtext', label: 'Subtext',
+      x: pos.x, y: pos.y,
+      w: format.width - padding * 2, h: sSize * 2,
+      fontSize: sSize,
+      color: state.subtextColor || autoColor,
+      font: state.subtextFont,
+    })
+  }
+
+  if (state.ctaText) {
+    const cSize = Math.round((state.ctaSize || 18) * sc)
+    const pos = getPos('cta', padding, format.height - padding - cSize * 2.5)
+    const ctaW = Math.max(state.ctaText.length * cSize * 0.65, 100)
+    elements.push({
+      field: 'cta', label: 'CTA',
+      x: pos.x, y: pos.y,
+      w: ctaW, h: cSize * 2.5,
+      fontSize: cSize,
+      color: state.ctaColor || '#0A0A0A',
+      font: state.ctaFont,
+    })
+  }
+
+  // Extra text layers
+  const extras = state.extraTextLayers || []
+  for (const layer of extras) {
+    if (!layer.content) continue
+    const layerSize = Math.round((layer.size || 24) * sc)
+    const pos = getPos(layer.id, padding, textAreaY + 60 * sc)
+    elements.push({
+      field: layer.id, label: `${layer.type} layer`,
+      x: pos.x, y: pos.y,
+      w: format.width - padding * 2, h: layerSize * 1.5,
+      fontSize: layerSize,
+      color: layer.color || autoColor,
+      font: layer.font,
+    })
+  }
+
+  return elements
+}
+
+/**
+ * Get badge bounding box.
+ */
+function getBadgeRect(state, format) {
+  const sc = Math.min(format.width, format.height) / 1080
+  const padding = Math.round(40 * sc)
+  const bpos = state.badgePosition || 'top-right'
+  const scaledSize = Math.round((state.badgeSize || 60) * sc)
+
+  const showBadge = state.badgeEnabled || state.badgeLine1 || state.badgeLine2 || state.badgeLine3
+  const hasBadgeImg = !!state.activeBadgeSrc
+  const hasOldBadge = !!state.badge
+
+  if (!showBadge && !hasBadgeImg && !hasOldBadge) return null
+
+  let bw = scaledSize
+  let bh = scaledSize
+
+  switch (bpos) {
+    case 'top-left':     return { x: padding, y: padding, w: bw, h: bh }
+    case 'top-right':    return { x: format.width - padding - bw, y: padding, w: bw, h: bh }
+    case 'bottom-left':  return { x: padding, y: format.height - padding - bh, w: bw, h: bh }
+    case 'bottom-right': return { x: format.width - padding - bw, y: format.height - padding - bh, w: bw, h: bh }
+    default:             return { x: padding, y: padding, w: bw, h: bh }
+  }
+}
+
+/**
+ * Check if two rectangles overlap.
+ */
+function rectsOverlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+}
+
+/**
  * Run all design police checks.
  * @param {Object} state - App state
  * @param {HTMLCanvasElement|null} canvas - Rendered canvas for visual checks
  * @param {Object} format - Current format { width, height }
- * @returns {Array<{ code: string, level: 'error'|'warning'|'pass', message: string, category: string, field?: string }>}
+ * @returns {Array<{ code, level, message, category, field? }>}
  */
 export function runDesignChecks(state, canvas, format) {
   const issues = []
+  const textElements = format ? getTextElements(state, format) : []
 
-  // ========== TEXT RULES ==========
-
-  // TEXT_001: Must have at least headline or subtext
-  if (!state.headline && !state.subtext) {
-    issues.push({ code: 'TEXT_001', level: 'error', message: 'No copy added — add a headline or description', category: 'text', field: 'text' })
-  } else {
-    issues.push({ code: 'TEXT_001', level: 'pass', message: 'Copy present', category: 'text' })
-  }
-
-  // TEXT_002: Headline character limit (Google Ads = 30)
-  if (state.headline && state.headline.length > 30) {
-    issues.push({ code: 'TEXT_002', level: 'error', message: `Headline exceeds 30 chars (${state.headline.length}/30)`, category: 'text', field: 'headline' })
-  } else if (state.headline) {
-    issues.push({ code: 'TEXT_002', level: 'pass', message: `Headline length OK (${state.headline.length}/30)`, category: 'text' })
-  }
-
-  // TEXT_003: Description character limit (Google Ads = 90)
-  if (state.subtext && state.subtext.length > 90) {
-    issues.push({ code: 'TEXT_003', level: 'error', message: `Description exceeds 90 chars (${state.subtext.length}/90)`, category: 'text', field: 'subtext' })
-  } else if (state.subtext) {
-    issues.push({ code: 'TEXT_003', level: 'pass', message: `Description length OK (${state.subtext.length}/90)`, category: 'text' })
-  }
-
-  // TEXT_004: Avoid repeated punctuation
-  const allText = [state.headline, state.tagline, state.subtext, state.ctaText, state.badge].filter(Boolean).join(' ')
-  if (/!!|!{2,}|\?\?|\?{2,}|\.{4,}/.test(allText)) {
-    issues.push({ code: 'TEXT_004', level: 'warning', message: 'Avoid repeated punctuation (!! or ?? or ....)', category: 'text', field: 'text' })
-  } else if (allText.length > 0) {
-    issues.push({ code: 'TEXT_004', level: 'pass', message: 'Punctuation OK', category: 'text' })
-  }
-
-  // TEXT_005: Avoid full product names (use nickname)
-  const productPatterns = /premier series|3-in-1 max|duoclean|flexology|hydrovac|ionflex|speedflex|liftaway|rotator|navigator|stratos/i
-  if (productPatterns.test(allText)) {
-    issues.push({ code: 'TEXT_005', level: 'warning', message: 'Use product nickname — avoid full product name in ads', category: 'text', field: 'text' })
-  } else if (allText.length > 0) {
-    issues.push({ code: 'TEXT_005', level: 'pass', message: 'No full product names detected', category: 'text' })
-  }
-
-  // ========== VISUAL RULES ==========
-
-  // VISUAL_001: Must have background image
+  // ========== IMAGE ==========
   if (!state.image) {
-    issues.push({ code: 'VISUAL_001', level: 'error', message: 'No background image uploaded', category: 'visual', field: 'image' })
+    issues.push({ code: 'IMAGE_001', level: 'error', message: 'Arka plan görseli yüklenmedi', category: 'visual', field: 'image' })
   } else {
-    issues.push({ code: 'VISUAL_001', level: 'pass', message: 'Background image present', category: 'visual' })
+    issues.push({ code: 'IMAGE_001', level: 'pass', message: 'Arka plan görseli mevcut', category: 'visual' })
   }
 
-  // VISUAL_002: Headline contrast (WCAG AA ≥ 4.5:1)
-  if (canvas && format && state.headline) {
-    const s = Math.min(format.width, format.height) / 1080
-    const padding = Math.round(40 * s)
-    const textAreaY = format.height * 0.50
-    const headlineSize = Math.round((state.headlineSize || 48) * s)
-
-    const textColor = state.headlineColor || (state.image && state.image.luminance > 128 ? '#1A1A1A' : '#F5F5F5')
-    const bgColor = getDominantColor(canvas, {
-      x: padding, y: textAreaY,
-      width: Math.min(format.width - padding * 2, 300),
-      height: headlineSize * 1.5,
-    })
-    const ratio = contrastRatio(hexToRgb(textColor), bgColor)
-    if (ratio < 3.0) {
-      issues.push({ code: 'VISUAL_002', level: 'error', message: `Headline contrast too low (${ratio.toFixed(1)}:1, need ≥4.5:1)`, category: 'visual', field: 'headline' })
-    } else if (ratio < 4.5) {
-      issues.push({ code: 'VISUAL_002', level: 'warning', message: `Headline contrast borderline (${ratio.toFixed(1)}:1, recommend ≥4.5:1)`, category: 'visual', field: 'headline' })
-    } else {
-      issues.push({ code: 'VISUAL_002', level: 'pass', message: `Headline contrast OK (${ratio.toFixed(1)}:1)`, category: 'visual' })
-    }
-  }
-
-  // VISUAL_003: Text safe zone (inner 85%)
+  // ========== TEXT CONTRAST ==========
   if (canvas && format) {
-    const s = Math.min(format.width, format.height) / 1080
-    const padding = Math.round(40 * s)
-    const safeMarginX = format.width * 0.075
-    const safeMarginY = format.height * 0.075
-    if (padding < safeMarginX || padding < safeMarginY) {
-      issues.push({ code: 'VISUAL_003', level: 'error', message: 'Text may fall outside platform safe zone (inner 85%)', category: 'visual', field: 'layout' })
-    } else {
-      issues.push({ code: 'VISUAL_003', level: 'pass', message: 'Text within safe zone', category: 'visual' })
-    }
-  }
+    for (const elem of textElements) {
+      if (elem.field === 'cta') continue // CTA has its own bg box
+      const bgColor = getDominantColor(canvas, {
+        x: elem.x, y: elem.y,
+        width: Math.min(elem.w, 400),
+        height: elem.h,
+      })
+      const textRgb = hexToRgb(elem.color)
+      const ratio = contrastRatio(textRgb, bgColor)
+      // Large text: fontSize >= 24px (18pt) → 3:1 minimum
+      // Small text: < 24px → 4.5:1 minimum
+      const isLarge = elem.fontSize >= 24
+      const threshold = isLarge ? 3.0 : 4.5
 
-  // VISUAL_004: CTA button present and readable
-  if (!state.ctaText) {
-    issues.push({ code: 'VISUAL_004', level: 'warning', message: 'No CTA button — consider adding a call-to-action', category: 'visual', field: 'cta' })
-  } else if (state.ctaText.length > 20) {
-    issues.push({ code: 'VISUAL_004', level: 'warning', message: `CTA text too long (${state.ctaText.length} chars) — keep under 20`, category: 'visual', field: 'cta' })
-  } else {
-    issues.push({ code: 'VISUAL_004', level: 'pass', message: 'CTA present and concise', category: 'visual' })
-  }
-
-  // ========== BRAND RULES ==========
-
-  // BRAND_001: Logo present
-  if (!state.logo) {
-    issues.push({ code: 'BRAND_001', level: 'warning', message: 'No brand logo applied', category: 'brand', field: 'logo' })
-  } else {
-    issues.push({ code: 'BRAND_001', level: 'pass', message: 'Brand logo present', category: 'brand' })
-
-    // Logo safe zone check
-    if (canvas && format) {
-      const s = Math.min(format.width, format.height) / 1080
-      const padding = Math.round(40 * s)
-      const logoMarginX = format.width * 0.05
-      const logoMarginY = format.height * 0.05
-      if (padding < logoMarginX || padding < logoMarginY) {
-        issues.push({ code: 'BRAND_001b', level: 'warning', message: 'Logo too close to edge', category: 'brand', field: 'logo' })
+      if (ratio < threshold) {
+        issues.push({
+          code: 'CONTRAST',
+          level: 'warning',
+          message: `Metin okunaksız — kontrast yetersiz (${elem.label}: ${ratio.toFixed(1)}:1, min ${threshold}:1)`,
+          category: 'visual',
+          field: elem.field,
+        })
+      } else {
+        issues.push({
+          code: 'CONTRAST',
+          level: 'pass',
+          message: `${elem.label} kontrast OK (${ratio.toFixed(1)}:1)`,
+          category: 'visual',
+        })
       }
     }
   }
 
-  // BRAND_002: Badge text length
-  if (state.badge && state.badge.length > 20) {
-    issues.push({ code: 'BRAND_002', level: 'warning', message: `Badge text too long (${state.badge.length} chars)`, category: 'brand', field: 'badge' })
-  } else if (state.badge) {
-    issues.push({ code: 'BRAND_002', level: 'pass', message: 'Badge text length OK', category: 'brand' })
+  // ========== SAFE ZONE (5% margin) ==========
+  if (format) {
+    const marginX = format.width * 0.05
+    const marginY = format.height * 0.05
+    const safeRight = format.width - marginX
+    const safeBottom = format.height - marginY
+
+    for (const elem of textElements) {
+      const outsideLeft = elem.x < marginX
+      const outsideTop = elem.y < marginY
+      const outsideRight = elem.x + elem.w > safeRight
+      const outsideBottom = elem.y + elem.h > safeBottom
+
+      if (outsideLeft || outsideTop || outsideRight || outsideBottom) {
+        issues.push({
+          code: 'SAFEZONE',
+          level: 'warning',
+          message: `Metin güvenli alan dışında (${elem.label})`,
+          category: 'visual',
+          field: elem.field,
+        })
+      }
+    }
+    // If all are safe
+    const safeCount = textElements.filter(el => {
+      return el.x >= marginX && el.y >= marginY &&
+        el.x + el.w <= safeRight && el.y + el.h <= safeBottom
+    }).length
+    if (safeCount === textElements.length && textElements.length > 0) {
+      issues.push({ code: 'SAFEZONE', level: 'pass', message: 'Tüm metinler güvenli alanda', category: 'visual' })
+    }
+  }
+
+  // ========== CTA BUTTON ==========
+  if (!state.ctaText) {
+    issues.push({ code: 'CTA', level: 'warning', message: 'CTA butonu eksik', category: 'visual', field: 'cta' })
+  } else {
+    issues.push({ code: 'CTA', level: 'pass', message: 'CTA butonu mevcut', category: 'visual' })
+  }
+
+  // ========== BADGE / TEXT OVERLAP ==========
+  if (format) {
+    const badgeRect = getBadgeRect(state, format)
+    if (badgeRect) {
+      let hasOverlap = false
+      for (const elem of textElements) {
+        if (rectsOverlap(badgeRect, { x: elem.x, y: elem.y, w: elem.w, h: elem.h })) {
+          hasOverlap = true
+          issues.push({
+            code: 'OVERLAP',
+            level: 'warning',
+            message: `Rozet metin üzerine biniyor (${elem.label})`,
+            category: 'visual',
+            field: elem.field,
+          })
+        }
+      }
+      if (!hasOverlap) {
+        issues.push({ code: 'OVERLAP', level: 'pass', message: 'Rozet ve metin örtüşmüyor', category: 'visual' })
+      }
+    }
+  }
+
+  // ========== FONT CONSISTENCY (max 5 families) ==========
+  const fonts = new Set()
+  if (state.headline) fonts.add(state.headlineFont)
+  if (state.tagline) fonts.add(state.taglineFont)
+  if (state.subtext) fonts.add(state.subtextFont)
+  if (state.ctaText) fonts.add(state.ctaFont)
+  const extras = state.extraTextLayers || []
+  for (const layer of extras) {
+    if (layer.content) fonts.add(layer.font)
+  }
+  if (fonts.size > 5) {
+    issues.push({
+      code: 'FONTS',
+      level: 'warning',
+      message: `Çok fazla font ailesi kullanıldı (${fonts.size}/5)`,
+      category: 'brand',
+    })
+  } else if (fonts.size > 0) {
+    issues.push({ code: 'FONTS', level: 'pass', message: `Font sayısı uygun (${fonts.size}/5)`, category: 'brand' })
+  }
+
+  // ========== COPY PRESENT ==========
+  const hasAnyText = state.headline || state.subtext || extras.some(l => l.content)
+  if (!hasAnyText) {
+    issues.push({ code: 'TEXT', level: 'error', message: 'Metin eklenmedi — başlık veya açıklama ekleyin', category: 'text', field: 'text' })
+  } else {
+    issues.push({ code: 'TEXT', level: 'pass', message: 'Metin mevcut', category: 'text' })
   }
 
   return issues

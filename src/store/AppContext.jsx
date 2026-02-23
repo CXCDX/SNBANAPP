@@ -55,11 +55,29 @@ const initialState = {
   activeBadgeSrc: null,
   badgePosition: persisted.badgePosition || 'top-right',
   badgeSize: persisted.badgeSize || 60,
+  // Badge designer
+  badgeEnabled: persisted.badgeEnabled ?? false,
+  badgeShape: persisted.badgeShape || 'circle',
+  badgeBgColor: persisted.badgeBgColor || '#FF3D57',
+  badgeTextColor: persisted.badgeTextColor || '#FFFFFF',
+  badgeBorderColor: persisted.badgeBorderColor || '#FFFFFF',
+  badgeBorderWidth: persisted.badgeBorderWidth ?? 0,
+  badgeFontFamily: persisted.badgeFontFamily || 'Barlow Condensed',
+  badgeFontSize: persisted.badgeFontSize || 12,
+  badgeBold: persisted.badgeBold ?? true,
+  badgeItalic: persisted.badgeItalic ?? false,
+  badgeTextAlign: persisted.badgeTextAlign || 'center',
+  badgeLine1: persisted.badgeLine1 || '',
+  badgeLine2: persisted.badgeLine2 || '',
+  badgeLine3: persisted.badgeLine3 || '',
+  badgeRotation: persisted.badgeRotation ?? 0,
   // Custom fonts
   customFonts: [],
   // CSV
   csvData: null,
   csvFileName: '',
+  // Extra text layers (multiple instances per type)
+  extraTextLayers: [],
   // Inline editor
   editingFormat: null,
   textPositions: {},
@@ -88,7 +106,13 @@ const UNDOABLE_ACTIONS = new Set([
   'SET_FIELD_FONT', 'SET_FIELD_COLOR', 'SET_FIELD_SIZE',
   'SET_LOGO', 'SET_LOGO_TYPE', 'SET_LOGO_POSITION', 'SET_LOGO_SIZE',
   'SET_BRAND_COLOR', 'SET_ACTIVE_BADGE', 'CLEAR_ACTIVE_BADGE', 'SET_BADGE_POSITION', 'SET_BADGE_SIZE',
+  'SET_BADGE_ENABLED',
+  'SET_BADGE_SHAPE', 'SET_BADGE_BG_COLOR', 'SET_BADGE_TEXT_COLOR', 'SET_BADGE_BORDER_COLOR',
+  'SET_BADGE_BORDER_WIDTH', 'SET_BADGE_FONT_FAMILY', 'SET_BADGE_FONT_SIZE', 'SET_BADGE_BOLD',
+  'SET_BADGE_ITALIC', 'SET_BADGE_TEXT_ALIGN', 'SET_BADGE_LINE1', 'SET_BADGE_LINE2', 'SET_BADGE_LINE3',
+  'SET_BADGE_ROTATION',
   'SET_TEXT_POSITION',
+  'ADD_TEXT_LAYER', 'UPDATE_TEXT_LAYER', 'REMOVE_TEXT_LAYER',
 ])
 
 const PERSIST_KEYS = [
@@ -97,7 +121,12 @@ const PERSIST_KEYS = [
   'subtextFont', 'subtextColor', 'subtextSize',
   'ctaFont', 'ctaColor', 'ctaSize',
   'logoType', 'logoPosition', 'logoSize', 'brandColor',
-  'badgePosition', 'badgeSize', 'exportQuality',
+  'badgePosition', 'badgeSize',
+  'badgeEnabled',
+  'badgeShape', 'badgeBgColor', 'badgeTextColor', 'badgeBorderColor', 'badgeBorderWidth',
+  'badgeFontFamily', 'badgeFontSize', 'badgeBold', 'badgeItalic', 'badgeTextAlign',
+  'badgeLine1', 'badgeLine2', 'badgeLine3', 'badgeRotation',
+  'exportQuality',
 ]
 
 function pushHistory(state) {
@@ -193,6 +222,42 @@ function coreReducer(state, action) {
       return { ...state, badgePosition: action.payload }
     case 'SET_BADGE_SIZE':
       return { ...state, badgeSize: action.payload }
+    case 'SET_BADGE_ENABLED':
+      return { ...state, badgeEnabled: action.payload }
+    case 'SET_BADGE_SHAPE':
+      return { ...state, badgeShape: action.payload }
+    case 'SET_BADGE_BG_COLOR':
+      return { ...state, badgeBgColor: action.payload }
+    case 'SET_BADGE_TEXT_COLOR':
+      return { ...state, badgeTextColor: action.payload }
+    case 'SET_BADGE_BORDER_COLOR':
+      return { ...state, badgeBorderColor: action.payload }
+    case 'SET_BADGE_BORDER_WIDTH':
+      return { ...state, badgeBorderWidth: action.payload }
+    case 'SET_BADGE_FONT_FAMILY':
+      return { ...state, badgeFontFamily: action.payload }
+    case 'SET_BADGE_FONT_SIZE':
+      return { ...state, badgeFontSize: action.payload }
+    case 'SET_BADGE_BOLD':
+      return { ...state, badgeBold: action.payload }
+    case 'SET_BADGE_ITALIC':
+      return { ...state, badgeItalic: action.payload }
+    case 'SET_BADGE_TEXT_ALIGN':
+      return { ...state, badgeTextAlign: action.payload }
+    case 'SET_BADGE_LINE1': {
+      const v = action.payload.slice(0, 20)
+      return { ...state, badgeLine1: v, badgeEnabled: v ? true : state.badgeEnabled }
+    }
+    case 'SET_BADGE_LINE2': {
+      const v = action.payload.slice(0, 20)
+      return { ...state, badgeLine2: v, badgeEnabled: v ? true : state.badgeEnabled }
+    }
+    case 'SET_BADGE_LINE3': {
+      const v = action.payload.slice(0, 20)
+      return { ...state, badgeLine3: v, badgeEnabled: v ? true : state.badgeEnabled }
+    }
+    case 'SET_BADGE_ROTATION':
+      return { ...state, badgeRotation: action.payload }
     case 'ADD_CUSTOM_FONT':
       return { ...state, customFonts: [...state.customFonts, action.payload] }
     case 'REMOVE_CUSTOM_FONT':
@@ -203,6 +268,36 @@ function coreReducer(state, action) {
       return { ...state, csvData: action.payload.rows, csvFileName: action.payload.fileName }
     case 'CLEAR_CSV_DATA':
       return { ...state, csvData: null, csvFileName: '' }
+    case 'ADD_TEXT_LAYER': {
+      const { type: layerType } = action.payload
+      const defaults = {
+        headline: { font: 'Barlow Condensed', color: '', size: 72 },
+        tagline: { font: 'Playfair Display', color: '', size: 36 },
+        subtext: { font: 'DM Sans', color: '', size: 18 },
+      }
+      const d = defaults[layerType] || defaults.subtext
+      const layer = { id: `${layerType}-${Date.now()}`, type: layerType, content: '', ...d }
+      return { ...state, extraTextLayers: [...state.extraTextLayers, layer] }
+    }
+    case 'UPDATE_TEXT_LAYER': {
+      const { id, key, value } = action.payload
+      return {
+        ...state,
+        extraTextLayers: state.extraTextLayers.map(l =>
+          l.id === id ? { ...l, [key]: value } : l
+        ),
+      }
+    }
+    case 'REMOVE_TEXT_LAYER':
+      return {
+        ...state,
+        extraTextLayers: state.extraTextLayers.filter(l => l.id !== action.payload),
+        textPositions: (() => {
+          const pos = { ...state.textPositions }
+          delete pos[action.payload]
+          return pos
+        })(),
+      }
     case 'SET_EDITING_FORMAT':
       return { ...state, editingFormat: action.payload }
     case 'SET_TEXT_POSITION':
@@ -258,7 +353,11 @@ export function AppProvider({ children }) {
       state.subtextFont, state.subtextColor, state.subtextSize,
       state.ctaFont, state.ctaColor, state.ctaSize,
       state.logoType, state.logoPosition, state.logoSize, state.brandColor,
-      state.badgePosition, state.badgeSize, state.exportQuality])
+      state.badgePosition, state.badgeSize, state.badgeEnabled,
+      state.badgeShape, state.badgeBgColor, state.badgeTextColor, state.badgeBorderColor,
+      state.badgeBorderWidth, state.badgeFontFamily, state.badgeFontSize, state.badgeBold,
+      state.badgeItalic, state.badgeTextAlign, state.badgeLine1, state.badgeLine2, state.badgeLine3,
+      state.badgeRotation, state.exportQuality])
 
   // Undo/Redo keyboard shortcuts
   useEffect(() => {

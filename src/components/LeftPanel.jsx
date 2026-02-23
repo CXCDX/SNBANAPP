@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import ImageUpload from './ImageUpload'
 import TextInputs from './TextInputs'
 import LogoSelector from './LogoSelector'
 import BadgeLibrary from './BadgeLibrary'
 import FontManager from './FontManager'
 import CsvBulkUpload from './CsvBulkUpload'
+import FocusPointSelector from './FocusPointSelector'
 
 function CollapsibleSection({ title, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -58,25 +58,25 @@ export default function LeftPanel() {
       <aside className="w-[480px] shrink-0 bg-surface overflow-y-auto" style={{ borderRight: '0.5px solid #E0E0DC' }}>
         <div className="px-4 pt-5 pb-8 space-y-4">
           {/* Masthead */}
-          <header className="space-y-0.5">
+          <header style={{ paddingLeft: '20px', paddingTop: '20px' }}>
             <p
               className="uppercase leading-none text-ink"
-              style={{ fontFamily: "'Playfair Display', serif", fontSize: '12px', letterSpacing: '0.12em' }}
+              style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '18px', fontWeight: 600, letterSpacing: '0.05em' }}
             >
-              Banner Studio
+              BANNER STUDIO
             </p>
             <p
               className="uppercase leading-none text-secondary"
-              style={{ fontFamily: "'Playfair Display', serif", fontSize: '11px', letterSpacing: '0.12em' }}
+              style={{ fontFamily: "'DM Mono', monospace", fontSize: '11px', fontWeight: 400, letterSpacing: '0.12em', marginTop: '4px' }}
             >
-              SharkNinja
+              SHARKNINJA
             </p>
           </header>
 
           <div className="h-px bg-border" />
 
-          <CollapsibleSection title="Image" defaultOpen={true}>
-            <ImageUpload />
+          <CollapsibleSection title="Focus Point" defaultOpen={false}>
+            <FocusPointSelector />
           </CollapsibleSection>
 
           <div className="h-px bg-border" />
@@ -93,7 +93,7 @@ export default function LeftPanel() {
 
           <div className="h-px bg-border" />
 
-          <CollapsibleSection title="Badges" defaultOpen={false}>
+          <CollapsibleSection title="Badges" defaultOpen={true}>
             <BadgeLibrary />
           </CollapsibleSection>
 

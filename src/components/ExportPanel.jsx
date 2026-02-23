@@ -101,15 +101,18 @@ export default function ExportPanel() {
     }
   }, [enabledFormats, state, dispatch])
 
-  // Store export fn for design police "Export Anyway"
+  // Store export fn for design police "Export Anyway" (only used when export modal is NOT open)
   exportFnRef.current = doExport
 
   // Listen for "export anyway" event from DesignPoliceModal
+  // Only handle if export modal is NOT open (ExportModal handles its own)
   useEffect(() => {
-    const handler = () => exportFnRef.current?.()
+    const handler = () => {
+      if (!state.showExportModal) exportFnRef.current?.()
+    }
     window.addEventListener('banner-export-anyway', handler)
     return () => window.removeEventListener('banner-export-anyway', handler)
-  }, [])
+  }, [state.showExportModal])
 
   const handleExport = useCallback(() => {
     if (enabledFormats.length === 0) {
@@ -250,6 +253,11 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
   const badgeImgSize = Math.round((state.badgeSize || 60) * sc)
   const textAreaY = format.height * 0.50
 
+  const getPos = (field, defaultX, defaultY) => {
+    if (state.textPositions?.[field]) return state.textPositions[field]
+    return { x: defaultX, y: defaultY }
+  }
+
   // Logo — positioned
   if (logoImg) {
     const lw = logoHeight * (logoImg.width / logoImg.height)
@@ -259,7 +267,79 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
 
   // Badge — positioned
   const bpos = state.badgePosition || 'top-right'
-  if (badgeImg) {
+  const showBadge = state.badgeEnabled || state.badgeLine1 || state.badgeLine2 || state.badgeLine3
+
+  if (showBadge) {
+    // Badge designer: render shape + multi-line text
+    const scaledSize = Math.round((state.badgeSize || 60) * sc)
+    const bp = getCornerPos(bpos, format.width, format.height, scaledSize, scaledSize, padding)
+    const cx = bp.x + scaledSize / 2
+    const cy = bp.y + scaledSize / 2
+    const half = scaledSize / 2
+    const rot = (state.badgeRotation || 0) * Math.PI / 180
+
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.rotate(rot)
+
+    // Shape
+    ctx.fillStyle = state.badgeBgColor || '#FF3D57'
+    const shape = state.badgeShape || 'circle'
+    if (shape === 'circle') {
+      ctx.beginPath()
+      ctx.arc(0, 0, half, 0, Math.PI * 2)
+      ctx.fill()
+      if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.stroke() }
+    } else if (shape === 'rectangle') {
+      ctx.fillRect(-half, -half, scaledSize, scaledSize)
+      if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.strokeRect(-half, -half, scaledSize, scaledSize) }
+    } else if (shape === 'pill') {
+      const ph = scaledSize * 0.6
+      const r = ph / 2
+      ctx.beginPath()
+      ctx.moveTo(-half + r, -ph / 2)
+      ctx.lineTo(half - r, -ph / 2)
+      ctx.arc(half - r, 0, r, -Math.PI / 2, Math.PI / 2)
+      ctx.lineTo(-half + r, ph / 2)
+      ctx.arc(-half + r, 0, r, Math.PI / 2, -Math.PI / 2)
+      ctx.closePath()
+      ctx.fill()
+      if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.stroke() }
+    } else if (shape === 'starburst') {
+      const points = 12
+      const inner = half * 0.7
+      ctx.beginPath()
+      for (let i = 0; i < points * 2; i++) {
+        const r2 = i % 2 === 0 ? half : inner
+        const a = (Math.PI * i) / points - Math.PI / 2
+        const method = i === 0 ? 'moveTo' : 'lineTo'
+        ctx[method](Math.cos(a) * r2, Math.sin(a) * r2)
+      }
+      ctx.closePath()
+      ctx.fill()
+      if (state.badgeBorderWidth > 0) { ctx.strokeStyle = state.badgeBorderColor || '#FFF'; ctx.lineWidth = state.badgeBorderWidth * sc; ctx.stroke() }
+    }
+
+    // Text
+    const lines = [state.badgeLine1, state.badgeLine2, state.badgeLine3].filter(Boolean)
+    if (lines.length > 0) {
+      const bfSize = Math.round((state.badgeFontSize || 12) * sc)
+      const bfStyle = `${state.badgeBold ? 'bold' : ''} ${state.badgeItalic ? 'italic' : ''}`.trim()
+      ctx.font = `${bfStyle || 'normal'} ${bfSize}px "${state.badgeFontFamily || 'Barlow Condensed'}", sans-serif`
+      ctx.fillStyle = state.badgeTextColor || '#FFFFFF'
+      ctx.textAlign = state.badgeTextAlign || 'center'
+      ctx.textBaseline = 'middle'
+      const lineH = bfSize * 1.2
+      const totalH = lines.length * lineH
+      const startY = -totalH / 2 + lineH / 2
+      lines.forEach((line, i) => {
+        const tx = state.badgeTextAlign === 'left' ? -half + 4 : state.badgeTextAlign === 'right' ? half - 4 : 0
+        ctx.fillText(line, tx, startY + i * lineH)
+      })
+    }
+
+    ctx.restore()
+  } else if (badgeImg) {
     const bh = badgeImgSize * (badgeImg.height / badgeImg.width)
     const bp = getCornerPos(bpos, format.width, format.height, badgeImgSize, bh, padding)
     ctx.drawImage(badgeImg, bp.x, bp.y, badgeImgSize, bh)
@@ -279,47 +359,68 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
   let yOff = textAreaY
 
   if (state.headline) {
+    const pos = getPos('headline', padding, yOff)
     ctx.fillStyle = state.headlineColor || autoColor
     ctx.font = `bold ${headlineSize}px ${hFont}`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
     ctx.globalAlpha = 1
-    yOff = wrapText(ctx, state.headline.toUpperCase(), padding, yOff, format.width - padding * 2, headlineSize * 1.1)
+    yOff = wrapText(ctx, state.headline.toUpperCase(), pos.x, pos.y, format.width - padding * 2, headlineSize * 1.1)
     yOff += 6
   }
 
   if (state.tagline) {
+    const pos = getPos('tagline', padding, yOff)
     ctx.fillStyle = state.taglineColor || autoColor
     ctx.globalAlpha = state.taglineColor ? 1 : 0.9
     ctx.font = `italic ${taglineSize}px ${tFont}`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    yOff = wrapText(ctx, state.tagline, padding, yOff, format.width - padding * 2, taglineSize * 1.3)
+    yOff = wrapText(ctx, state.tagline, pos.x, pos.y, format.width - padding * 2, taglineSize * 1.3)
     yOff += 4
     ctx.globalAlpha = 1
   }
 
   if (state.subtext) {
+    const pos = getPos('subtext', padding, yOff)
     ctx.fillStyle = state.subtextColor || autoColor
     ctx.globalAlpha = state.subtextColor ? 1 : 0.8
     ctx.font = `${subtextSize}px ${sFont}`
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
-    wrapText(ctx, state.subtext, padding, yOff, format.width - padding * 2, subtextSize * 1.6)
+    wrapText(ctx, state.subtext, pos.x, pos.y, format.width - padding * 2, subtextSize * 1.6)
+    ctx.globalAlpha = 1
+  }
+
+  // Extra text layers
+  const extras = state.extraTextLayers || []
+  for (const layer of extras) {
+    if (!layer.content) continue
+    const layerSize = Math.round((layer.size || 24) * sc)
+    const pos = getPos(layer.id, padding, textAreaY + 60 * sc)
+    const isHL = layer.type === 'headline'
+    const isTL = layer.type === 'tagline'
+    const layerFont = fontStr(layer.font)
+    ctx.fillStyle = layer.color || autoColor
+    ctx.globalAlpha = layer.color ? 1 : (isTL ? 0.9 : isHL ? 1 : 0.8)
+    ctx.font = `${isHL ? 'bold' : isTL ? 'italic' : ''} ${layerSize}px ${layerFont}`.trim()
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    wrapText(ctx, isHL ? layer.content.toUpperCase() : layer.content, pos.x, pos.y, format.width - padding * 2, layerSize * 1.3)
     ctx.globalAlpha = 1
   }
 
   if (state.ctaText) {
+    const pos = getPos('cta', padding, format.height - padding - ctaFontSize * 2.5)
     const ctaW = Math.max(state.ctaText.length * ctaFontSize * 0.65, 100)
     const ctaH = ctaFontSize * 2.5
-    const ctaY = format.height - padding - ctaH
     ctx.fillStyle = state.ctaColor || '#0A0A0A'
-    ctx.fillRect(padding, ctaY, ctaW, ctaH)
+    ctx.fillRect(pos.x, pos.y, ctaW, ctaH)
     ctx.fillStyle = '#FFFFFF'
     ctx.font = `500 ${ctaFontSize}px ${cFont}`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(state.ctaText.toUpperCase(), padding + ctaW / 2, ctaY + ctaH / 2)
+    ctx.fillText(state.ctaText.toUpperCase(), pos.x + ctaW / 2, pos.y + ctaH / 2)
   }
 
   ctx.fillStyle = state.brandColor
@@ -329,21 +430,23 @@ function renderCanvas({ format, state, bgImg, logoImg, badgeImg, autoColor, over
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ')
-  let line = ''
+  const paragraphs = text.split('\n')
   let offsetY = y
-
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + ' '
-    const metrics = ctx.measureText(testLine)
-    if (metrics.width > maxWidth && i > 0) {
-      ctx.fillText(line.trim(), x, offsetY)
-      line = words[i] + ' '
-      offsetY += lineHeight
-    } else {
-      line = testLine
+  for (const para of paragraphs) {
+    const words = para.split(' ')
+    let line = ''
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + ' '
+      if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+        ctx.fillText(line.trim(), x, offsetY)
+        line = words[i] + ' '
+        offsetY += lineHeight
+      } else {
+        line = testLine
+      }
     }
+    ctx.fillText(line.trim(), x, offsetY)
+    offsetY += lineHeight
   }
-  ctx.fillText(line.trim(), x, offsetY)
-  return offsetY + lineHeight
+  return offsetY
 }
