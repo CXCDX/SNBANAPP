@@ -330,7 +330,7 @@ export default function BadgeLibrary() {
           <p className="text-[11px] font-mono text-secondary">{badgeSize}px</p>
         </div>
         <input
-          type="range" min="40" max="200"
+          type="range" min="40" max="300"
           value={badgeSize}
           onChange={e => dispatch({ type: 'SET_BADGE_SIZE', payload: Number(e.target.value) })}
           className="w-full h-1 appearance-none bg-border cursor-pointer"

@@ -378,7 +378,7 @@ export default function InlineEditor() {
               {badgeImage && (() => {
                 const bh = badgeImgSz * (badgeImage.height / badgeImage.width)
                 const bp = cornerPos(badgePosition, badgeImgSz, bh)
-                return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSz} height={bh} />
+                return <KonvaImage image={badgeImage} x={bp.x} y={bp.y} width={badgeImgSz} height={bh} onClick={(e) => { e.cancelBubble = true; setSelectedId('badge') }} />
               })()}
 
               {badge && !badgeImage && (() => {
@@ -386,7 +386,7 @@ export default function InlineEditor() {
                 const bh = badgeFontSize * 2.2
                 const bp = cornerPos(badgePosition, bw, bh)
                 return (
-                  <Group x={bp.x} y={bp.y}>
+                  <Group x={bp.x} y={bp.y} onClick={(e) => { e.cancelBubble = true; setSelectedId('badge') }}>
                     <Rect width={bw} height={bh} fill={brandColor} />
                     <Text text={badge} width={bw} height={bh} align="center" verticalAlign="middle" fontSize={badgeFontSize} fontFamily={headlineFont} fontStyle="bold" fill="#FFFFFF" />
                   </Group>
@@ -409,6 +409,63 @@ export default function InlineEditor() {
                   listening={false}
                 />
               )}
+
+              {/* Badge resize handles */}
+              {selectedId === 'badge' && (() => {
+                const hasBadge = badgeImage || (badge && !badgeImage)
+                if (!hasBadge) return null
+
+                let bx, by, bw, bh
+                if (badgeImage) {
+                  const bh2 = badgeImgSz * (badgeImage.height / badgeImage.width)
+                  const bp = cornerPos(badgePosition, badgeImgSz, bh2)
+                  bx = bp.x; by = bp.y; bw = badgeImgSz; bh = bh2
+                } else {
+                  const bw2 = Math.max(badge.length * badgeFontSize * 0.65, 60)
+                  const bh2 = badgeFontSize * 2.2
+                  const bp = cornerPos(badgePosition, bw2, bh2)
+                  bx = bp.x; by = bp.y; bw = bw2; bh = bh2
+                }
+
+                const hsz = 8
+                const centerX = bx + bw / 2
+                const centerY = by + bh / 2
+                const corners = [
+                  { cx: bx, cy: by },
+                  { cx: bx + bw, cy: by },
+                  { cx: bx, cy: by + bh },
+                  { cx: bx + bw, cy: by + bh },
+                ]
+
+                const handleResize = (e) => {
+                  const node = e.target
+                  const nx = node.x() + hsz / 2
+                  const ny = node.y() + hsz / 2
+                  const dist = Math.max(Math.abs(nx - centerX), Math.abs(ny - centerY))
+                  const newScaled = dist * 2
+                  const newBase = Math.round(newScaled / s)
+                  const clamped = Math.max(40, Math.min(300, newBase))
+                  dispatch({ type: 'SET_BADGE_SIZE', payload: clamped })
+                }
+
+                return (
+                  <>
+                    <Rect x={bx - 4} y={by - 4} width={bw + 8} height={bh + 8}
+                      stroke="#0A0A0A" strokeWidth={2} dash={[6, 3]} listening={false} />
+                    {corners.map((c, i) => (
+                      <Rect
+                        key={`badge-handle-${i}`}
+                        x={c.cx - hsz / 2} y={c.cy - hsz / 2}
+                        width={hsz} height={hsz}
+                        fill="#0A0A0A"
+                        draggable
+                        onDragEnd={handleResize}
+                        onClick={(e) => { e.cancelBubble = true }}
+                      />
+                    ))}
+                  </>
+                )
+              })()}
 
               {/* Draggable text elements */}
               {headline && (() => {
