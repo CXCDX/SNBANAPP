@@ -77,19 +77,29 @@ export default function ExportModal() {
     const formats = AD_FORMATS.filter(f => selectedFormats.includes(f.id))
     if (formats.length === 0) return
 
-    console.log('[ExportModal] handleDownload start, formats:', formats.length)
-    console.log('[ExportModal] state.image exists:', !!state.image)
-    console.log('[ExportModal] state.headline:', state.headline)
+    console.log('[ExportModal] handleDownload — running design police')
 
-    // Run design police — only block on errors, not warnings
+    // Render a REAL canvas with actual images for accurate contrast checks
     const format0 = formats[0]
+    let bgImg = null
+    let logoImg = null
+    let badgeImg = null
+    try {
+      if (state.image) bgImg = await loadImage(state.image.src)
+      if (state.logo) logoImg = await loadImage(state.logo)
+      if (state.activeBadgeSrc) badgeImg = await loadImage(state.activeBadgeSrc)
+    } catch (err) {
+      console.error('[ExportModal] Image load for police check failed:', err)
+    }
+
+    const textTheme = state.image ? getTextTheme(state.image.luminance) : 'light'
+    const autoColor = textTheme === 'light' ? '#F5F5F5' : '#1A1A1A'
+    const overlayGradient = getOverlayGradient(textTheme)
+
     let checkCanvas = null
     try {
       checkCanvas = renderCanvas({
-        format: format0, state,
-        bgImg: null, logoImg: null, badgeImg: null,
-        autoColor: '#F5F5F5',
-        overlayGradient: getOverlayGradient('light'),
+        format: format0, state, bgImg, logoImg, badgeImg, autoColor, overlayGradient,
         hFont: fontStr(state.headlineFont),
         tFont: fontStr(state.taglineFont),
         sFont: fontStr(state.subtextFont),
@@ -100,15 +110,16 @@ export default function ExportModal() {
     }
 
     const issues = runDesignChecks(state, checkCanvas, format0)
-    const hasErrors = issues.some(i => i.level === 'error')
+    const hasIssues = issues.some(i => i.level === 'error' || i.level === 'warning')
 
-    if (hasErrors) {
+    if (hasIssues) {
+      // Show design police modal — user must click "Yine de Al" to proceed
       dispatch({ type: 'SET_DESIGN_ISSUES', payload: issues })
       dispatch({ type: 'SET_SHOW_DESIGN_POLICE', payload: true })
       return
     }
 
-    // Proceed with export directly
+    // No issues — export directly
     await doExport(formats)
   }, [selectedFormats, state, dispatch, exportFormat, quality])
 

@@ -1,9 +1,9 @@
 import { useAppState, useAppDispatch } from '../store/AppContext'
 
 const CATEGORY_LABELS = {
-  text: 'Text & Copy',
-  visual: 'Visual & Layout',
-  brand: 'Brand Compliance',
+  text: 'Metin & Kopya',
+  visual: 'Görsel & Düzen',
+  brand: 'Marka Uyumu',
 }
 
 const LEVEL_COLORS = {
@@ -71,7 +71,7 @@ export default function DesignPoliceModal({ onExportAnyway }) {
         <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid #E0E0DC' }}>
           <div className="flex items-center justify-between mb-3">
             <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '20px', fontWeight: 700, color: '#0A0A0A' }}>
-              Design Review
+              Tasarım Kontrolü
             </h2>
             <button
               onClick={close}
@@ -98,21 +98,35 @@ export default function DesignPoliceModal({ onExportAnyway }) {
           <div className="flex gap-3 mt-2">
             {errors.length > 0 && (
               <span className="text-[11px] font-mono" style={{ color: LEVEL_COLORS.error }}>
-                {errors.length} error{errors.length !== 1 ? 's' : ''}
+                {errors.length} hata
               </span>
             )}
             {warnings.length > 0 && (
               <span className="text-[11px] font-mono" style={{ color: LEVEL_COLORS.warning }}>
-                {warnings.length} warning{warnings.length !== 1 ? 's' : ''}
+                {warnings.length} uyarı
               </span>
             )}
             {passes.length > 0 && (
               <span className="text-[11px] font-mono" style={{ color: LEVEL_COLORS.pass }}>
-                {passes.length} passed
+                {passes.length} geçti
               </span>
             )}
           </div>
         </div>
+
+        {/* Warning banner */}
+        {(hasErrors || hasWarnings) && (
+          <div
+            className="mx-6 mt-4 px-4 py-3 text-[12px] font-mono"
+            style={{
+              background: hasErrors ? 'rgba(255,61,87,0.08)' : 'rgba(255,184,0,0.08)',
+              border: `1px solid ${hasErrors ? LEVEL_COLORS.error : LEVEL_COLORS.warning}`,
+              color: '#0A0A0A',
+            }}
+          >
+            Tasarım uyarıları var. Yine de export al?
+          </div>
+        )}
 
         {/* Category sections */}
         <div className="px-6 py-4 space-y-4">
@@ -124,7 +138,6 @@ export default function DesignPoliceModal({ onExportAnyway }) {
             const catWarnings = items.filter(i => i.level === 'warning')
             const catPasses = items.filter(i => i.level === 'pass')
 
-            // Section color based on worst issue
             const sectionColor = catErrors.length > 0 ? LEVEL_COLORS.error
               : catWarnings.length > 0 ? LEVEL_COLORS.warning
               : LEVEL_COLORS.pass
@@ -139,7 +152,6 @@ export default function DesignPoliceModal({ onExportAnyway }) {
                 </div>
 
                 <div className="space-y-1.5 ml-4">
-                  {/* Errors first */}
                   {catErrors.map((issue, i) => (
                     <div key={`e-${i}`} className="flex items-start gap-2">
                       <span className="text-[11px] mt-0.5 shrink-0" style={{ color: LEVEL_COLORS.error }}>
@@ -152,7 +164,6 @@ export default function DesignPoliceModal({ onExportAnyway }) {
                     </div>
                   ))}
 
-                  {/* Warnings */}
                   {catWarnings.map((issue, i) => (
                     <div key={`w-${i}`} className="flex items-start gap-2">
                       <span className="text-[11px] mt-0.5 shrink-0" style={{ color: LEVEL_COLORS.warning }}>
@@ -165,7 +176,6 @@ export default function DesignPoliceModal({ onExportAnyway }) {
                     </div>
                   ))}
 
-                  {/* Passes */}
                   {catPasses.map((issue, i) => (
                     <div key={`p-${i}`} className="flex items-start gap-2">
                       <span className="text-[11px] mt-0.5 shrink-0" style={{ color: LEVEL_COLORS.pass }}>
@@ -192,7 +202,7 @@ export default function DesignPoliceModal({ onExportAnyway }) {
                 border: `1px solid ${hasErrors ? LEVEL_COLORS.error : LEVEL_COLORS.warning}`,
               }}
             >
-              Fix Issues
+              Düzelt
             </button>
           )}
           <button
@@ -200,7 +210,7 @@ export default function DesignPoliceModal({ onExportAnyway }) {
             className="flex-1 py-2 text-[11px] font-mono uppercase tracking-[0.1em] bg-ink text-bg cursor-pointer transition-all hover:bg-bg hover:text-ink"
             style={{ border: '1px solid #0A0A0A' }}
           >
-            Export Anyway
+            Yine de Al
           </button>
         </div>
       </div>
